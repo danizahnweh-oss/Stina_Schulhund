@@ -48,6 +48,11 @@ h3{font-size:1.12rem;margin:0 0 .35em}
 a{color:var(--akzent-dunkel)}
 strong{font-weight:800}
 
+/* ---------- Fokus & Auswahl ---------- */
+:focus-visible{outline:2.5px solid var(--akzent);outline-offset:2px;border-radius:8px}
+.nav-eintrag:focus-visible,.modul-karte:focus-visible,.option:focus-visible{outline-offset:3px}
+::selection{background:var(--akzent-hell);color:var(--akzent-dunkel)}
+
 /* ---------- Kopfzeile ---------- */
 header.kopf{
   position:sticky;top:0;z-index:50;
@@ -121,8 +126,9 @@ main#inhalt{flex:1;min-width:0;padding:30px clamp(18px,4vw,56px) 80px;max-width:
 .grid-titel{font-family:'Fredoka',sans-serif;font-weight:500;font-size:1.2rem;margin:0 0 14px}
 
 .modul-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
-.modul-karte{display:flex;flex-direction:column;gap:6px;background:var(--karte);border:1px solid var(--linie);border-radius:var(--radius);padding:20px 22px;text-decoration:none;color:var(--tinte);box-shadow:var(--schatten);transition:transform .15s,border-color .15s}
-.modul-karte:hover{transform:translateY(-3px);border-color:var(--akzent)}
+.modul-karte{display:flex;flex-direction:column;gap:6px;background:var(--karte);border:1px solid var(--linie);border-radius:var(--radius);padding:20px 22px;text-decoration:none;color:var(--tinte);box-shadow:var(--schatten);transition:transform .15s,border-color .15s,box-shadow .15s}
+.modul-karte:hover{transform:translateY(-3px);border-color:var(--akzent);box-shadow:0 10px 24px rgba(95,75,50,.13)}
+.modul-karte:active{transform:translateY(-1px)}
 .modul-karte.fertig{background:linear-gradient(180deg,var(--gruen-hell),var(--karte) 70%)}
 .mk-kopf{display:flex;align-items:center;justify-content:space-between}
 .mk-nr{width:34px;height:34px;border-radius:50%;background:var(--akzent-hell);color:var(--akzent-dunkel);display:flex;align-items:center;justify-content:center;font-size:.95rem}
@@ -135,9 +141,10 @@ main#inhalt{flex:1;min-width:0;padding:30px clamp(18px,4vw,56px) 80px;max-width:
 .mk-chip.an{background:var(--gruen-hell);color:var(--gruen)}
 
 /* ---------- Knöpfe ---------- */
-.knopf{display:inline-block;border:none;border-radius:99px;padding:11px 22px;font-size:.95rem;cursor:pointer;text-decoration:none;text-align:center}
-.knopf.primaer{background:var(--akzent);color:#fff}
-.knopf.primaer:hover{background:var(--akzent-dunkel)}
+.knopf{display:inline-block;border:none;border-radius:99px;padding:11px 22px;font-size:.95rem;cursor:pointer;text-decoration:none;text-align:center;transition:background .15s,box-shadow .15s,transform .08s}
+.knopf:active{transform:translateY(1px)}
+.knopf.primaer{background:var(--akzent);color:#fff;box-shadow:0 2px 6px rgba(168,85,49,.25)}
+.knopf.primaer:hover{background:var(--akzent-dunkel);box-shadow:0 4px 12px rgba(168,85,49,.3)}
 .knopf.sekundaer{background:var(--karte);color:var(--akzent-dunkel);border:1.5px solid var(--akzent)}
 .knopf.sekundaer:hover{background:var(--akzent-hell)}
 .knopf.leise{background:none;border:1px solid var(--linie);color:var(--leise);font-size:.82rem;padding:7px 16px}
@@ -198,11 +205,12 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 .option:hover:not(:disabled){border-color:var(--akzent);background:#FFFDF9}
 .option:disabled{cursor:default;opacity:.75}
 .option.korrekt{background:var(--gruen-hell);border-color:var(--gruen);color:#3E5733;opacity:1;font-weight:700}
-.option.falsch{background:var(--rot-hell);border-color:var(--rot);color:var(--rot);opacity:1}
+.option.falsch{background:var(--rot-hell);border-color:var(--rot);color:#7E3526;opacity:1;font-weight:700}
 .erklaerung{margin-top:12px;padding:10px 16px;border-radius:12px;font-size:.9rem}
 .erklaerung.gut{background:var(--gruen-hell)}
 .erklaerung.schlecht{background:var(--rot-hell)}
 .quiz-ergebnis{margin:22px 0}
+.ergebnis-aktionen{display:flex;gap:10px;flex-wrap:wrap}
 .ergebnis-karte{display:flex;align-items:center;gap:20px;background:var(--karte);border:1.5px solid var(--linie);border-radius:var(--radius);padding:20px 26px;margin-bottom:14px;box-shadow:var(--schatten)}
 .ergebnis-karte.bestanden{border-color:var(--gruen);background:linear-gradient(180deg,var(--gruen-hell),var(--karte))}
 .ergebnis-karte p{margin:0;color:var(--leise)}
@@ -220,7 +228,9 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 .lk-seite>span{font-size:1.15rem;font-weight:700;line-height:1.5}
 .lk-hinten>span{font-size:1rem;font-weight:600}
 .lk-seite small{color:var(--leise);font-size:.78rem}
-.karten-aktionen{display:flex;justify-content:center;gap:12px;min-height:48px;align-items:center}
+.karten-aktionen{display:flex;justify-content:center;gap:12px;min-height:48px;align-items:center;flex-wrap:wrap}
+.knopf.sekundaer.bw-schwer{border-color:var(--rot);color:var(--rot)}
+.knopf.sekundaer.bw-schwer:hover{background:var(--rot-hell)}
 .karten-hinweis{color:var(--leise);font-size:.88rem;margin:0}
 .karten-reset{display:flex;justify-content:center;margin-top:26px}
 .karte-fertig{background:var(--karte);border:1.5px dashed var(--linie);border-radius:22px;padding:40px;text-align:center;width:min(620px,100%)}
@@ -453,6 +463,17 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
   .hero{padding:24px}
   .hero-status{border-left:none;border-top:1px dashed var(--linie);width:100%;padding-top:18px}
   h1{font-size:1.7rem}
+}
+@media (max-width:560px){
+  .marke{min-width:0;font-size:1rem;overflow:hidden;text-overflow:ellipsis}
+  #countdown{min-width:0;overflow:hidden;text-overflow:ellipsis}
+}
+
+/* ---------- Reduzierte Bewegung ---------- */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition-duration:.01ms !important;animation-duration:.01ms !important;scroll-behavior:auto !important}
+  .modul-karte:hover{transform:none}
+  .knopf:active,.modul-karte:active{transform:none}
 }
 </style>
 </head>

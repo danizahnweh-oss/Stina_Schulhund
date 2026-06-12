@@ -80,6 +80,7 @@
   stand.gelesen = stand.gelesen || {};
   stand.quiz = stand.quiz || {};
   stand.karten = stand.karten || {};
+  stand.fehler = stand.fehler || {};
   if (!stand.pruefungsDatum) { stand.pruefungsDatum = '2026-06-18'; speichereStand(stand); }
 
   function quizBest(id) { return (stand.quiz[id] && stand.quiz[id].best) || 0; }
@@ -159,6 +160,14 @@
       '<span class="nav-status">' + (stand.examBest ? stand.examBest + '%' : '') + '</span>');
     pruef.href = '#/pruefung';
     nav.appendChild(pruef);
+
+    var fehlerN = Object.keys(stand.fehler || {}).length;
+    var fehler = el('a', 'nav-eintrag' + (aktiv === 'fehler' ? ' aktiv' : ''),
+      '<span class="nav-nr" style="background:var(--rot-hell);color:var(--rot)">!</span>' +
+      '<span class="nav-titel">Meine Fehler</span>' +
+      '<span class="nav-status" style="color:var(--akzent-dunkel)">' + (fehlerN || '') + '</span>');
+    fehler.href = '#/fehler';
+    nav.appendChild(fehler);
   }
 
   // ---------- Startseite ----------
@@ -258,7 +267,7 @@
     [['lernen', 'Lernen'], ['quiz', 'Quiz'], ['karten', 'Karteikarten']].forEach(function (t) {
       var b = el('button', 'tab' + (tab === t[0] ? ' aktiv' : ''), t[1]);
       b.type = 'button';
-      b.addEventListener('click', function () { zeigeModul(id, t[0]); });
+      b.addEventListener('click', function () { location.hash = '#/modul/' + id + '/' + t[0]; });
       tabs.appendChild(b);
     });
     main.appendChild(tabs);
@@ -267,7 +276,7 @@
     main.appendChild(bereich);
 
     if (tab === 'lernen') zeichneLernen(m, bereich);
-    else if (tab === 'quiz') zeichneQuiz(QUIZ[m.id] || [], bereich, m.id, false);
+    else if (tab === 'quiz') zeichneQuiz(QUIZ[m.id] || [], bereich, m.id, 'modul');
     else zeichneKarten(m, bereich);
   }
 
@@ -317,24 +326,27 @@
     fuss.appendChild(btn);
     var weiterQuiz = el('button', 'knopf sekundaer', 'Zum Quiz');
     weiterQuiz.type = 'button';
-    weiterQuiz.addEventListener('click', function () { zeigeModul(m.id, 'quiz'); });
+    weiterQuiz.addEventListener('click', function () { location.hash = '#/modul/' + m.id + '/quiz'; });
     fuss.appendChild(weiterQuiz);
     wrap.appendChild(fuss);
   }
 
   // ---------- Quiz ----------
-  function zeichneQuiz(fragen, wrap, modId, istPruefung) {
+  function zeichneQuiz(fragen, wrap, modId, modus, herkunft) {
+    modus = modus || 'modul';
+    herkunft = herkunft || modus;
     wrap.innerHTML = '';
     if (!fragen.length) { wrap.appendChild(el('p', 'leer', 'Für dieses Modul gibt es noch kein Quiz.')); return; }
 
     var info = el('div', 'quiz-info');
-    var best = istPruefung ? (stand.examBest || 0) : quizBest(modId);
-    info.innerHTML = '<p>' + fragen.length + ' Fragen · Antwort anklicken, du bekommst sofort Rückmeldung.' +
+    var best = modus === 'pruefung' ? (stand.examBest || 0) : (modus === 'modul' ? quizBest(modId) : 0);
+    info.innerHTML = '<p>' + (modus === 'uebung' ? 'Wiederholung · ' : '') + fragen.length + ' Fragen · Antwort anklicken, du bekommst sofort Rückmeldung.' +
       (best > 0 ? ' Bisheriges Bestergebnis: <strong>' + best + ' %</strong>' : '') +
-      (istPruefung ? '' : ' · Ab <strong>80 %</strong> gilt das Modul-Quiz als bestanden.') + '</p>';
+      (modus === 'modul' ? ' · Ab <strong>80 %</strong> gilt das Modul-Quiz als bestanden.' : '') + '</p>';
     wrap.appendChild(info);
 
     var beantwortet = 0, richtig = 0;
+    var falsche = [];
     var liste = el('div', 'quiz-liste');
     wrap.appendChild(liste);
 
@@ -352,7 +364,13 @@
           gesperrt = true;
           beantwortet++;
           var korrekt = o.i === q.k;
-          if (korrekt) richtig++;
+          if (korrekt) {
+            richtig++;
+            if (herkunft === 'fehler') { delete stand.fehler[q.f]; speichereStand(stand); }
+          } else {
+            falsche.push(q);
+            if (modus === 'pruefung') { stand.fehler[q.f] = { f: q.f, a: q.a, k: q.k, e: q.e }; speichereStand(stand); }
+          }
           Array.prototype.forEach.call(optWrap.children, function (kind, ki) {
             kind.disabled = true;
             if (reihenfolge[ki].i === q.k) kind.classList.add('korrekt');
@@ -372,6 +390,12 @@
     var ergebnisBox = el('div', 'quiz-ergebnis');
     wrap.appendChild(ergebnisBox);
 
+    function neuStart() {
+      if (herkunft === 'pruefung') zeigePruefung();
+      else if (herkunft === 'fehler') zeigeFehler();
+      else zeigeModul(modId, 'quiz');
+    }
+
     function zeigeErgebnis() {
       var pct = Math.round((richtig / fragen.length) * 100);
       var note;
@@ -382,24 +406,31 @@
       ergebnisBox.innerHTML = '<div class="ergebnis-karte' + (pct >= 80 ? ' bestanden' : '') + '">' +
         '<div class="ring klein" style="--p:' + pct + '"><span>' + pct + '%</span></div>' +
         '<div><h3>' + richtig + ' von ' + fragen.length + ' richtig</h3><p>' + note + '</p></div></div>';
-      var nochmal = el('button', 'knopf primaer', 'Nochmal üben');
-      nochmal.type = 'button';
-      nochmal.addEventListener('click', function () {
-        if (istPruefung) zeigePruefung();
-        else zeigeModul(modId, 'quiz');
-      });
-      ergebnisBox.appendChild(nochmal);
 
-      if (istPruefung) {
+      var knoepfe = el('div', 'ergebnis-aktionen');
+      if (falsche.length) {
+        var subset = mische(falsche.slice());
+        var nurFalsch = el('button', 'knopf primaer', 'Nur die ' + falsche.length + ' falsche' + (falsche.length === 1 ? '' : 'n') + ' wiederholen');
+        nurFalsch.type = 'button';
+        nurFalsch.addEventListener('click', function () { zeichneQuiz(subset, wrap, modId, 'uebung', herkunft); });
+        knoepfe.appendChild(nurFalsch);
+      }
+      var nochmal = el('button', 'knopf ' + (falsche.length ? 'sekundaer' : 'primaer'), falsche.length ? 'Ganzes Quiz neu' : 'Nochmal üben');
+      nochmal.type = 'button';
+      nochmal.addEventListener('click', neuStart);
+      knoepfe.appendChild(nochmal);
+      ergebnisBox.appendChild(knoepfe);
+
+      if (modus === 'pruefung') {
         if (pct > (stand.examBest || 0)) { stand.examBest = pct; speichereStand(stand); }
-      } else {
+      } else if (modus === 'modul') {
         stand.quiz[modId] = stand.quiz[modId] || {};
         stand.quiz[modId].last = pct;
         if (pct > (stand.quiz[modId].best || 0)) stand.quiz[modId].best = pct;
         speichereStand(stand);
       }
       zeichneKopf();
-      zeichneSeitenleiste(istPruefung ? 'pruefung' : modId);
+      zeichneSeitenleiste(herkunft === 'pruefung' ? 'pruefung' : (herkunft === 'fehler' ? 'fehler' : modId));
     }
   }
 
@@ -409,12 +440,21 @@
     wrap.innerHTML = '';
     if (!karten.length) { wrap.appendChild(el('p', 'leer', 'Für dieses Modul gibt es noch keine Karteikarten.')); return; }
 
-    stand.karten[m.id] = stand.karten[m.id] || { gewusst: [] };
-    var gewusst = stand.karten[m.id].gewusst;
+    var st = stand.karten[m.id] = stand.karten[m.id] || {};
+    // Migration: altes Format { gewusst: [...] } -> Stufen (gewusst = gemeistert)
+    if (!st.stufe) {
+      st.stufe = {};
+      if (st.gewusst && st.gewusst.length) st.gewusst.forEach(function (i) { st.stufe[i] = 2; });
+      speichereStand(stand);
+    }
+    var stufe = st.stufe;
+    function lvl(i) { return stufe[i] || 0; }
+    function gemeistert() { var n = 0; karten.forEach(function (k, i) { if (lvl(i) === 2) n++; }); return n; }
 
-    var offen = [];
-    karten.forEach(function (k, i) { if (gewusst.indexOf(i) === -1) offen.push(i); });
-    var stapel = mische(offen);
+    // Stapel dieser Runde: alle Karten mit Stufe < 2, „schwer" zuerst
+    var schwer = [], ok = [];
+    karten.forEach(function (k, i) { if (lvl(i) === 0) schwer.push(i); else if (lvl(i) === 1) ok.push(i); });
+    var stapel = mische(schwer).concat(mische(ok));
     var pos = 0;
 
     var status = el('p', 'karten-status');
@@ -427,31 +467,39 @@
     wrap.appendChild(aktionen);
 
     var resetWrap = el('div', 'karten-reset');
-    var reset = el('button', 'knopf leise', 'Alle Karten zurücksetzen (' + gewusst.length + ' gewusst)');
+    var reset = el('button', 'knopf leise', 'Alle Karten zurücksetzen (' + gemeistert() + ' gemeistert)');
     reset.type = 'button';
     reset.addEventListener('click', function () {
-      stand.karten[m.id].gewusst = [];
+      st.stufe = {};
       speichereStand(stand);
       zeigeModul(m.id, 'karten');
     });
     resetWrap.appendChild(reset);
     wrap.appendChild(resetWrap);
 
+    function bewerte(idx, level, nochmal) {
+      stufe[idx] = level;
+      speichereStand(stand);
+      if (nochmal) stapel.push(idx); // „schwer": kommt in dieser Runde nochmal
+      pos++;
+      zeigeKarte();
+    }
+
     function zeigeKarte() {
-      status.innerHTML = 'Gewusst: <strong>' + gewusst.length + ' / ' + karten.length + '</strong>' +
-        (stapel.length ? ' · Im Stapel: ' + (stapel.length - pos) : '');
+      status.innerHTML = 'Gemeistert: <strong>' + gemeistert() + ' / ' + karten.length + '</strong>' +
+        (pos < stapel.length ? ' · Noch in dieser Runde: ' + (stapel.length - pos) : '');
       aktionen.innerHTML = '';
       buehne.innerHTML = '';
 
       if (pos >= stapel.length) {
-        var fertigAlle = gewusst.length >= karten.length;
+        var fertigAlle = gemeistert() >= karten.length;
         buehne.appendChild(el('div', 'karte-fertig',
-          '<h3>' + (fertigAlle ? 'Alle Karten gewusst – stark!' : 'Stapel durch!') + '</h3>' +
-          '<p>' + (fertigAlle ? 'Du kannst den Stapel zurücksetzen und erneut üben.' : 'Die nicht gewussten Karten kommen beim nächsten Durchgang wieder.') + '</p>'));
-        var weiter = el('button', 'knopf primaer', fertigAlle ? 'Von vorn üben' : 'Restliche Karten üben');
+          '<h3>' + (fertigAlle ? 'Alle Karten gemeistert – stark!' : 'Runde geschafft!') + '</h3>' +
+          '<p>' + (fertigAlle ? 'Du kannst den Stapel zurücksetzen und erneut üben.' : 'Karten, die du mit „Ok" oder „Schwer" bewertet hast, kommen in der nächsten Runde wieder.') + '</p>'));
+        var weiter = el('button', 'knopf primaer', fertigAlle ? 'Von vorn üben' : 'Nächste Runde');
         weiter.type = 'button';
         weiter.addEventListener('click', function () {
-          if (fertigAlle) { stand.karten[m.id].gewusst = []; speichereStand(stand); }
+          if (fertigAlle) { st.stufe = {}; speichereStand(stand); }
           zeigeModul(m.id, 'karten');
         });
         aktionen.appendChild(weiter);
@@ -474,21 +522,21 @@
       function zeigeBewertung(anzeigen) {
         aktionen.innerHTML = '';
         if (!anzeigen) {
-          aktionen.appendChild(el('p', 'karten-hinweis', 'Erst überlegen, dann umdrehen.'));
+          aktionen.appendChild(el('p', 'karten-hinweis', 'Erst überlegen – dann umdrehen und ehrlich bewerten.'));
           return;
         }
-        var nein = el('button', 'knopf sekundaer', 'Nochmal üben');
-        nein.type = 'button';
-        nein.addEventListener('click', function () { pos++; zeigeKarte(); });
-        var ja = el('button', 'knopf primaer', 'Gewusst ✓');
-        ja.type = 'button';
-        ja.addEventListener('click', function () {
-          if (gewusst.indexOf(idx) === -1) gewusst.push(idx);
-          speichereStand(stand);
-          pos++; zeigeKarte();
-        });
-        aktionen.appendChild(nein);
-        aktionen.appendChild(ja);
+        var bSchwer = el('button', 'knopf sekundaer bw-schwer', 'Schwer');
+        bSchwer.type = 'button';
+        bSchwer.addEventListener('click', function () { bewerte(idx, 0, true); });
+        var bOk = el('button', 'knopf sekundaer', 'Ok');
+        bOk.type = 'button';
+        bOk.addEventListener('click', function () { bewerte(idx, 1, false); });
+        var bLeicht = el('button', 'knopf primaer', 'Leicht ✓');
+        bLeicht.type = 'button';
+        bLeicht.addEventListener('click', function () { bewerte(idx, 2, false); });
+        aktionen.appendChild(bSchwer);
+        aktionen.appendChild(bOk);
+        aktionen.appendChild(bLeicht);
       }
     }
     zeigeKarte();
@@ -503,7 +551,7 @@
     var kopf = el('div', 'modul-kopf');
     kopf.setAttribute('data-screen-label', 'Abschlussprüfung');
     kopf.innerHTML = '<p class="modul-tag">Prüfungssimulation</p><h1>Abschlussprüfung</h1>' +
-      '<p class="hero-sub">20 zufällige Fragen aus allen 14 Modulen – jedes Mal neu gemischt.</p>';
+      '<p class="hero-sub">20 zufällige Fragen aus allen Modulen – jedes Mal neu gemischt. Was du falsch beantwortest, sammelt sich unter „Meine Fehler“ zum gezielten Nachüben.</p>';
     main.appendChild(kopf);
 
     var alle = [];
@@ -514,7 +562,30 @@
 
     var bereich = el('div', 'tab-inhalt');
     main.appendChild(bereich);
-    zeichneQuiz(auswahl, bereich, null, true);
+    zeichneQuiz(auswahl, bereich, null, 'pruefung');
+  }
+
+  // ---------- Meine Fehler ----------
+  function zeigeFehler() {
+    var main = document.getElementById('inhalt');
+    main.innerHTML = '';
+    main.scrollTop = 0;
+
+    var kopf = el('div', 'modul-kopf');
+    kopf.setAttribute('data-screen-label', 'Meine Fehler');
+    kopf.innerHTML = '<p class="modul-tag">Gesammelt aus der Abschlussprüfung</p><h1>Meine Fehler</h1>';
+    main.appendChild(kopf);
+
+    var liste = Object.keys(stand.fehler || {}).map(function (k) { return stand.fehler[k]; });
+    var bereich = el('div', 'tab-inhalt');
+    main.appendChild(bereich);
+
+    if (!liste.length) {
+      bereich.appendChild(el('p', 'leer',
+        'Noch keine Fehler gesammelt. Alles, was du in der Abschlussprüfung falsch beantwortest, landet hier – zum gezielten Nachüben. Beantwortest du eine Frage hier richtig, verschwindet sie wieder aus der Liste.'));
+      return;
+    }
+    zeichneQuiz(mische(liste), bereich, null, 'fehler');
   }
 
   // ---------- Router ----------
@@ -523,10 +594,13 @@
     var teile = h.replace(/^#\//, '').split('/');
     if (teile[0] === 'modul' && teile[1]) {
       zeichneSeitenleiste(teile[1]);
-      zeigeModul(teile[1]);
+      zeigeModul(teile[1], teile[2]);
     } else if (teile[0] === 'pruefung') {
       zeichneSeitenleiste('pruefung');
       zeigePruefung();
+    } else if (teile[0] === 'fehler') {
+      zeichneSeitenleiste('fehler');
+      zeigeFehler();
     } else {
       zeichneSeitenleiste('home');
       zeigeStart();
