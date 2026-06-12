@@ -178,9 +178,10 @@
       '<div class="hero-aktionen"></div></div>' +
       '<div class="hero-status"><div class="ring" style="--p:' + pct + '"><span>' + pct + '%</span></div>' +
       '<p class="ring-label">Gesamtfortschritt</p>' +
-      '<button class="datum-knopf" type="button">' + (stand.pruefungsDatum
+      '<span class="datum-wrap"><button class="datum-knopf" type="button">' + (stand.pruefungsDatum
         ? 'Prüfung: ' + new Date(stand.pruefungsDatum + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' }) + (tage !== null && tage >= 0 ? ' · noch ' + tage + ' Tage' : '')
-        : 'Prüfungstermin festlegen') + '</button></div>';
+        : 'Prüfungstermin festlegen') + '</button>' +
+      '<input type="date" class="datum-input" aria-label="Prüfungstermin wählen" value="' + (stand.pruefungsDatum || '') + '"></span></div>';
     main.appendChild(hero);
 
     var aktionen = hero.querySelector('.hero-aktionen');
@@ -194,14 +195,16 @@
     b2.href = '#/pruefung';
     aktionen.appendChild(b2);
 
+    var datumInput = hero.querySelector('.datum-input');
     hero.querySelector('.datum-knopf').addEventListener('click', function () {
-      var eingabe = prompt('Wann ist deine Prüfung? (Format: JJJJ-MM-TT)', stand.pruefungsDatum || '2026-06-18');
-      if (eingabe && /^\d{4}-\d{2}-\d{2}$/.test(eingabe.trim())) {
-        stand.pruefungsDatum = eingabe.trim();
+      if (datumInput.showPicker) { try { datumInput.showPicker(); return; } catch (e) {} }
+      datumInput.focus(); datumInput.click();
+    });
+    datumInput.addEventListener('change', function () {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datumInput.value)) {
+        stand.pruefungsDatum = datumInput.value;
         speichereStand(stand);
         zeichneKopf(); zeigeStart();
-      } else if (eingabe !== null) {
-        alert('Bitte im Format JJJJ-MM-TT eingeben, z. B. 2026-06-18');
       }
     });
 
@@ -223,6 +226,7 @@
         '</div>';
       grid.appendChild(karte);
     });
+    main.appendChild(el('h2', 'grid-titel', 'Lernmodule'));
     main.appendChild(grid);
   }
 

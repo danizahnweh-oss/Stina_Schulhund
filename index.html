@@ -13,7 +13,7 @@
   --bg2:#F3EADA;
   --karte:#FFFFFF;
   --tinte:#41382B;
-  --leise:#8A7C66;
+  --leise:#726445;
   --linie:#E8DECC;
   --akzent:#C2693F;
   --akzent-dunkel:#A85531;
@@ -116,6 +116,9 @@ main#inhalt{flex:1;min-width:0;padding:30px clamp(18px,4vw,56px) 80px;max-width:
 .ring-label{margin:0;font-size:.85rem;color:var(--leise)}
 .datum-knopf{border:1px solid var(--linie);background:var(--bg);border-radius:99px;padding:6px 14px;font-family:'Nunito',sans-serif;font-size:.82rem;color:var(--leise);cursor:pointer}
 .datum-knopf:hover{border-color:var(--akzent);color:var(--akzent-dunkel)}
+.datum-wrap{position:relative;display:inline-flex}
+.datum-input{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);opacity:0;pointer-events:none}
+.grid-titel{font-family:'Fredoka',sans-serif;font-weight:500;font-size:1.2rem;margin:0 0 14px}
 
 .modul-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px}
 .modul-karte{display:flex;flex-direction:column;gap:6px;background:var(--karte);border:1px solid var(--linie);border-radius:var(--radius);padding:20px 22px;text-decoration:none;color:var(--tinte);box-shadow:var(--schatten);transition:transform .15s,border-color .15s}
@@ -189,7 +192,7 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 /* ---------- Quiz ---------- */
 .quiz-info p{color:var(--leise);font-size:.92rem;margin:0 0 18px}
 .frage-karte{background:var(--karte);border:1px solid var(--linie);border-radius:var(--radius);padding:20px 24px;margin:14px 0;box-shadow:var(--schatten)}
-.frage-nr{margin:0;font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--leise)}
+.frage-nr{margin:0;font-size:.82rem;font-weight:700;color:var(--leise)}
 .optionen{display:flex;flex-direction:column;gap:8px;margin-top:12px}
 .option{text-align:left;background:var(--bg);border:1.5px solid var(--linie);border-radius:12px;padding:10px 16px;font-family:'Nunito',sans-serif;font-size:.95rem;color:var(--tinte);cursor:pointer;line-height:1.45}
 .option:hover:not(:disabled){border-color:var(--akzent);background:#FFFDF9}
@@ -250,7 +253,7 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 @media(max-width:640px){.foto-zwei{grid-template-columns:1fr}.foto-figur img{height:220px}}
 
 /* ============ Grafik-Panel ============ */
-.grafik-panel{background:linear-gradient(180deg,color-mix(in srgb,var(--mod,var(--akzent)) 8%,#fff),var(--karte));border:1px solid var(--linie);border-left:5px solid var(--mod,var(--akzent));border-radius:var(--radius);padding:22px 26px 26px;box-shadow:var(--schatten);margin-bottom:26px}
+.grafik-panel{background:linear-gradient(180deg,color-mix(in srgb,var(--mod,var(--akzent)) 8%,#fff),var(--karte));border:1px solid var(--linie);border-top:3px solid var(--mod,var(--akzent));border-radius:var(--radius);padding:22px 26px 26px;box-shadow:var(--schatten);margin-bottom:26px}
 .grafik-panel>h2{display:flex;align-items:center;gap:10px;color:color-mix(in srgb,var(--mod,var(--akzent)) 75%,#000)}
 .grafik-panel>h2 .gic{width:22px;height:22px;color:var(--mod,var(--akzent))}
 .g-titel{font-family:'Fredoka',sans-serif;font-size:1.02rem;color:color-mix(in srgb,var(--mod,var(--akzent)) 72%,#000);margin:0 0 10px}
@@ -371,7 +374,7 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 
 /* Körper-Check */
 .koerper-check{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
-.kc{background:var(--karte);border:1px solid var(--linie);border-left:3px solid var(--mod,var(--akzent));border-radius:10px;padding:9px 13px;font-size:.86rem}
+.kc{background:var(--karte);border:1px solid var(--linie);border-radius:10px;padding:9px 13px;font-size:.86rem}
 .kc-t{display:block;font-weight:800;font-size:.78rem;color:color-mix(in srgb,var(--mod,var(--akzent)) 72%,#000);text-transform:uppercase;letter-spacing:.04em}
 
 /* Emotionen-Chips */
@@ -420,7 +423,7 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 
 /* Schleimhäute */
 .schleim{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
-.sl{border-radius:13px;padding:13px 15px;border:1px solid var(--linie);border-left:8px solid var(--c,#ccc)}
+.sl{border-radius:13px;padding:13px 15px;border:1px solid var(--linie);border-top:4px solid var(--c,#ccc)}
 .sl b{font-family:'Fredoka',sans-serif;font-weight:500;display:block}
 .sl span{font-size:.82rem;color:var(--leise)}
 
