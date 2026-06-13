@@ -270,6 +270,13 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 .grafik-inhalt>.g-titel:not(:first-child){margin-top:6px}
 .g-pal-c{--c:var(--mod,var(--akzent))}
 
+/* Audio / Vorlesen */
+.audio-panel{display:flex;align-items:center;gap:14px;background:linear-gradient(180deg,color-mix(in srgb,var(--mod,var(--akzent)) 10%,#fff),var(--karte));border:1px solid var(--linie);border-left:4px solid var(--mod,var(--akzent));border-radius:var(--radius);padding:14px 18px;box-shadow:var(--schatten);margin-bottom:22px}
+.audio-panel .audio-ic{flex:none;width:34px;height:34px;display:grid;place-items:center;border-radius:50%;background:color-mix(in srgb,var(--mod,var(--akzent)) 16%,#fff);color:var(--mod,var(--akzent));font-size:1.1rem}
+.audio-panel .audio-txt{flex:none;font-family:'Fredoka',sans-serif;font-size:.98rem;color:color-mix(in srgb,var(--mod,var(--akzent)) 70%,#000)}
+.audio-panel audio{flex:1;min-width:0;height:38px}
+@media (max-width:560px){.audio-panel{flex-wrap:wrap}.audio-panel audio{flex-basis:100%}}
+
 /* Balkendiagramm */
 .balken-chart{display:flex;flex-direction:column;gap:9px;margin-bottom:6px}
 .balken-zeile{display:flex;align-items:center;gap:10px}

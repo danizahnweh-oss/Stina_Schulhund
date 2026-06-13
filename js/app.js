@@ -281,6 +281,18 @@
   }
 
   function zeichneLernen(m, wrap) {
+    // Audio-Player – lädt nur die fertige MP3, wird ausgeblendet falls (noch) keine da ist
+    var audioPanel = el('section', 'audio-panel');
+    audioPanel.innerHTML = '<span class="audio-ic">🔊</span>' +
+      '<span class="audio-txt">Seite anhören</span>' +
+      '<audio controls preload="none" src="assets/audio/' + m.id + '.m4a"></audio>';
+    audioPanel.style.display = 'none';
+    var au = audioPanel.querySelector('audio');
+    au.addEventListener('loadedmetadata', function () { audioPanel.style.display = ''; });
+    au.addEventListener('error', function () { audioPanel.style.display = 'none'; });
+    au.load();
+    wrap.appendChild(audioPanel);
+
     if (FOTO[m.id]) {
       var fb = el('section', 'foto-bereich');
       var fhtml = (FOTO[m.id].length > 1 ? '<div class="foto-zwei">' : '');

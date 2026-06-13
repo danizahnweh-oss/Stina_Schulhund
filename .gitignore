@@ -1,1 +1,7 @@
 .DS_Store
+# OpenAI-Key niemals einchecken
+.env
+*.key
+openai-key.txt
+# temporäre Audio-Teile
+assets/audio/_teile/
