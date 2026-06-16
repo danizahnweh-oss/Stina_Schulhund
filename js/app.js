@@ -81,6 +81,7 @@
   stand.quiz = stand.quiz || {};
   stand.karten = stand.karten || {};
   stand.fehler = stand.fehler || {};
+  stand.examGesehen = stand.examGesehen || [];
   if (!stand.pruefungsDatum) { stand.pruefungsDatum = '2026-06-18'; speichereStand(stand); }
 
   function quizBest(id) { return (stand.quiz[id] && stand.quiz[id].best) || 0; }
@@ -555,6 +556,62 @@
   }
 
   // ---------- Abschlussprüfung ----------
+  var EXAM_ANZAHL = 30;   // Fragen pro Prüfung (mehr als die früheren 20)
+  var EXAM_SCHWER = 12;   // davon garantiert schwere Fragen (Rest: gemischt/leichter)
+
+  function alleFragen() {
+    var alle = [];
+    Object.keys(QUIZ).forEach(function (mid) {
+      QUIZ[mid].forEach(function (q) { alle.push(q); });
+    });
+    return alle;
+  }
+
+  // Stellt die Prüfung zusammen: feste Mischung aus schweren (d:3) und
+  // leichteren Fragen. Bevorzugt dabei Fragen, die zuletzt NICHT dran
+  // waren – so erneuert sich die Prüfung stark, statt sich zu wiederholen.
+  function baueExam() {
+    var alle = alleFragen();
+    var schwer = alle.filter(function (q) { return q.d === 3; });
+    var rest = alle.filter(function (q) { return q.d !== 3; });
+
+    var gesehen = stand.examGesehen || [];
+    var gesehenSet = {};
+    gesehen.forEach(function (k) { gesehenSet[k] = true; });
+
+    // aus einer Liste n Fragen ziehen – zuletzt gezeigte kommen zuletzt
+    function ziehe(liste, n, schon) {
+      var frisch = mische(liste.filter(function (q) { return !gesehenSet[q.f] && !schon[q.f]; }));
+      var alt = mische(liste.filter(function (q) { return gesehenSet[q.f] && !schon[q.f]; }));
+      return frisch.concat(alt).slice(0, n);
+    }
+
+    var schon = {};
+    var auswahl = [];
+    function nimm(liste, n) {
+      ziehe(liste, n, schon).forEach(function (q) { schon[q.f] = true; auswahl.push(q); });
+    }
+
+    nimm(schwer, Math.min(EXAM_SCHWER, schwer.length));
+    nimm(rest, EXAM_ANZAHL - auswahl.length);
+    if (auswahl.length < EXAM_ANZAHL) nimm(alle, EXAM_ANZAHL - auswahl.length); // Auffüllen
+
+    // Historie fortschreiben: gewählte Fragen als „zuletzt gesehen" merken,
+    // aber immer genug übrig lassen, damit weiter rotiert werden kann.
+    var maxHist = Math.max(0, alle.length - EXAM_ANZAHL);
+    var neu = gesehen.slice();
+    auswahl.forEach(function (q) {
+      var i = neu.indexOf(q.f);
+      if (i >= 0) neu.splice(i, 1);
+      neu.push(q.f);
+    });
+    if (neu.length > maxHist) neu = neu.slice(neu.length - maxHist);
+    stand.examGesehen = neu;
+    speichereStand(stand);
+
+    return mische(auswahl);
+  }
+
   function zeigePruefung() {
     var main = document.getElementById('inhalt');
     main.innerHTML = '';
@@ -563,18 +620,12 @@
     var kopf = el('div', 'modul-kopf');
     kopf.setAttribute('data-screen-label', 'Abschlussprüfung');
     kopf.innerHTML = '<p class="modul-tag">Prüfungssimulation</p><h1>Abschlussprüfung</h1>' +
-      '<p class="hero-sub">20 zufällige Fragen aus allen Modulen – jedes Mal neu gemischt. Was du falsch beantwortest, sammelt sich unter „Meine Fehler“ zum gezielten Nachüben.</p>';
+      '<p class="hero-sub">' + EXAM_ANZAHL + ' Fragen aus allen Modulen – eine Mischung aus schwereren und leichteren Fragen, jedes Mal neu zusammengestellt. Es kommen bevorzugt Fragen dran, die zuletzt nicht abgefragt wurden. Was du falsch beantwortest, sammelt sich unter „Meine Fehler“ zum gezielten Nachüben.</p>';
     main.appendChild(kopf);
-
-    var alle = [];
-    Object.keys(QUIZ).forEach(function (mid) {
-      QUIZ[mid].forEach(function (q) { alle.push(q); });
-    });
-    var auswahl = mische(alle).slice(0, 20);
 
     var bereich = el('div', 'tab-inhalt');
     main.appendChild(bereich);
-    zeichneQuiz(auswahl, bereich, null, 'pruefung');
+    zeichneQuiz(baueExam(), bereich, null, 'pruefung');
   }
 
   // ---------- Meine Fehler ----------
