@@ -690,35 +690,66 @@
       '\n\nBewerte die Antwort: vergib „punkte“ (0–' + FT_MAX + '), beurteile jedes der fünf Kriterien (' + FT_KRIT.join(', ') +
       ') mit erfuellung „voll“/„teilweise“/„nicht“ und einem kurzen Kommentar, nenne Stärken, konkrete Verbesserungsvorschläge und eine knappe Gesamtbegründung.';
 
-    return fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: CLAUDE_MODELL,
-        max_tokens: 1500,
-        system: sys,
-        output_config: { format: { type: 'json_schema', schema: schema } },
-        messages: [{ role: 'user', content: userText }]
-      })
-    }).then(function (res) {
-      if (!res.ok) {
-        if (res.status === 401) throw new Error('Der API-Schlüssel wurde nicht akzeptiert. Bitte prüfe ihn in den Einstellungen.');
-        if (res.status === 429) throw new Error('Zu viele Anfragen an die KI. Bitte einen Moment warten und erneut versuchen.');
-        throw new Error('Die KI-Bewertung ist fehlgeschlagen (Fehler ' + res.status + ').');
-      }
-      return res.json();
-    }).then(function (data) {
+    var body = JSON.stringify({
+      model: CLAUDE_MODELL,
+      max_tokens: 1500,
+      system: sys,
+      output_config: { format: { type: 'json_schema', schema: schema } },
+      messages: [{ role: 'user', content: userText }]
+    });
+
+    function warte(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    function auswerten(data) {
       if (data.stop_reason === 'refusal') throw new Error('Die KI konnte diese Antwort nicht bewerten.');
       var txt = (data.content || []).filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('');
       var parsed = JSON.parse(txt);
       var p = Math.max(0, Math.min(FT_MAX, Math.round(parsed.punkte)));
       return { punkte: p, max: FT_MAX, kriterien: parsed.kriterien || [], staerken: parsed.staerken || [], verbesserungen: parsed.verbesserungen || [], begruendung: parsed.begruendung || '', ki: true };
-    });
+    }
+
+    // Bei Überlastung (429/529/5xx) oder Netzwerkfehlern automatisch erneut
+    // versuchen. Exponentielles Backoff mit Jitter, plus Respektierung des
+    // „retry-after“-Headers (in Sekunden), den Anthropic bei 529/429 mitschickt.
+    var MAX_VERSUCHE = 5;
+
+    // Wartezeit für den nächsten Versuch. nr = bereits gescheiterte Versuche
+    // (1 = erster Retry). Ohne Header: 1,5 s · 3 s · 6 s · 12 s (max 20 s),
+    // jeweils + bis zu 1 s Zufall, damit nicht alle gleichzeitig erneut anfragen.
+    function backoff(nr, retryAfterSek) {
+      if (retryAfterSek > 0) return Math.min(retryAfterSek * 1000, 30000);
+      var basis = Math.min(1500 * Math.pow(2, nr - 1), 20000);
+      return basis + Math.floor(Math.random() * 1000);
+    }
+
+    function versuch(nr) {
+      return fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': key,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: body
+      }).then(function (res) {
+        if (res.ok) return res.json().then(auswerten);
+        if (res.status === 401) throw new Error('Der API-Schlüssel wurde nicht akzeptiert. Bitte prüfe ihn in den Einstellungen.');
+        var transient = res.status === 429 || res.status === 529 || res.status >= 500;
+        if (transient && nr < MAX_VERSUCHE) {
+          var ra = parseFloat(res.headers.get('retry-after'));
+          return warte(backoff(nr, ra)).then(function () { return versuch(nr + 1); });
+        }
+        if (transient) throw new Error('Die KI ist gerade stark überlastet (Fehler ' + res.status + '). Bitte ein bis zwei Minuten warten und „Antwort bewerten" erneut klicken.');
+        throw new Error('Die KI-Bewertung ist fehlgeschlagen (Fehler ' + res.status + ').');
+      }, function () {
+        // Netzwerk-/Verbindungsfehler – ebenfalls erneut versuchen.
+        if (nr < MAX_VERSUCHE) return warte(backoff(nr, 0)).then(function () { return versuch(nr + 1); });
+        throw new Error('Keine Verbindung zur KI möglich. Bitte Internet­verbindung prüfen und erneut versuchen.');
+      });
+    }
+
+    return versuch(1);
   }
 
   // ---------- Abschlussprüfung (Multiple-Choice + Freitext) ----------
@@ -830,8 +861,10 @@
               ta.setAttribute('readonly', 'readonly');
               aktualisiereStatus();
             }).catch(function (err) {
-              aktion.innerHTML = '';
               var msg = err && err.message === 'kein-key' ? 'Kein API-Schlüssel hinterlegt.' : (err && err.message) || 'Bewertung fehlgeschlagen.';
+              aktion.innerHTML = '';
+              btn.textContent = 'Erneut mit KI bewerten';
+              aktion.appendChild(btn);   // erneuter KI-Versuch bleibt möglich (z. B. nach Überlastung)
               zeigeSelbstbewertung(fb, frage, fi, ftErgebnis, aktualisiereStatus, msg);
             });
           } else {
