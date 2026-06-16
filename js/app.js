@@ -82,6 +82,7 @@
   stand.karten = stand.karten || {};
   stand.fehler = stand.fehler || {};
   stand.examGesehen = stand.examGesehen || [];
+  stand.ftGesehen = stand.ftGesehen || [];
   if (!stand.pruefungsDatum) { stand.pruefungsDatum = '2026-06-18'; speichereStand(stand); }
 
   function quizBest(id) { return (stand.quiz[id] && stand.quiz[id].best) || 0; }
@@ -612,6 +613,115 @@
     return mische(auswahl);
   }
 
+  // ---------- Freitext-Teil: Pool, Rotation, KI-Bewertung ----------
+  var FT = window.QUIZ_FREITEXT || [];
+  var FT_KRIT = window.QUIZ_FREITEXT_KRITERIEN || ['Fachliche Richtigkeit', 'Vollständigkeit', 'Praxisbezug', 'Argumentationsqualität', 'Bezug zum Schulhund-Einsatz'];
+  var FT_ANZAHL = 5;          // verpflichtende Freitextfragen pro Prüfung
+  var FT_MAX = 10;            // Punkte je Freitextfrage
+  var MC_GEWICHT = 0.7;       // Anteil Multiple-Choice an der Gesamtnote
+  var FT_GEWICHT = 0.3;       // Anteil Freitext an der Gesamtnote
+  var CLAUDE_KEY = 'shb-claude-key';
+  var CLAUDE_MODELL = 'claude-opus-4-8';
+
+  function holeKey() { try { return localStorage.getItem(CLAUDE_KEY) || ''; } catch (e) { return ''; } }
+  function setzeKey(k) { try { if (k) localStorage.setItem(CLAUDE_KEY, k); else localStorage.removeItem(CLAUDE_KEY); } catch (e) {} }
+
+  // 5 Freitextfragen mit Rotation wählen (zuletzt gezeigte zuletzt)
+  function baueFreitext() {
+    if (!FT.length) return [];
+    var gesehen = stand.ftGesehen || [];
+    var gs = {}; gesehen.forEach(function (k) { gs[k] = true; });
+    var frisch = mische(FT.filter(function (q) { return !gs[q.id]; }));
+    var alt = mische(FT.filter(function (q) { return gs[q.id]; }));
+    var auswahl = frisch.concat(alt).slice(0, Math.min(FT_ANZAHL, FT.length));
+
+    var maxHist = Math.max(0, FT.length - auswahl.length);
+    var neu = gesehen.slice();
+    auswahl.forEach(function (q) {
+      var i = neu.indexOf(q.id);
+      if (i >= 0) neu.splice(i, 1);
+      neu.push(q.id);
+    });
+    if (neu.length > maxHist) neu = neu.slice(neu.length - maxHist);
+    stand.ftGesehen = neu;
+    speichereStand(stand);
+    return mische(auswahl);
+  }
+
+  // Ruft Claude zur Bewertung einer Freitextantwort auf. Gibt ein
+  // strukturiertes Ergebnis zurück oder wirft einen Fehler (mit dt. Meldung).
+  function bewerteMitKI(frage, antwort) {
+    var key = holeKey();
+    if (!key) return Promise.reject(new Error('kein-key'));
+
+    var schema = {
+      type: 'object', additionalProperties: false,
+      properties: {
+        punkte: { type: 'integer' },
+        kriterien: {
+          type: 'array',
+          items: {
+            type: 'object', additionalProperties: false,
+            properties: {
+              name: { type: 'string' },
+              erfuellung: { type: 'string', enum: ['voll', 'teilweise', 'nicht'] },
+              kommentar: { type: 'string' }
+            },
+            required: ['name', 'erfuellung', 'kommentar']
+          }
+        },
+        staerken: { type: 'array', items: { type: 'string' } },
+        verbesserungen: { type: 'array', items: { type: 'string' } },
+        begruendung: { type: 'string' }
+      },
+      required: ['punkte', 'kriterien', 'staerken', 'verbesserungen', 'begruendung']
+    };
+
+    var sys = 'Du bist eine erfahrene, faire Prüferin für die Zertifizierung von Schulhund-Teams (Schulhunde Bayern e.V.). ' +
+      'Du bewertest die Freitext-Antwort einer angehenden Schulhund-Lehrkraft auf dem Niveau einer anspruchsvollen Zertifizierungsprüfung – streng, aber fair und konstruktiv. ' +
+      'Bewerte ausschließlich die fachlichen Inhalte (keine Rechtschreibung/Stilnoten). Vergib 0 bis ' + FT_MAX + ' Punkte. ' +
+      'Beziehe dich auf die fünf Kriterien: ' + FT_KRIT.join(', ') + '. ' +
+      'Die Referenz-Musterlösung ist Maßstab, aber fachlich richtige Antworten mit anderen Worten/Beispielen sind voll zu werten. ' +
+      'Sei konkret und ermutigend. Antworte auf Deutsch und fülle das vorgegebene JSON-Schema.';
+
+    var userText = 'PRÜFUNGSFRAGE:\n' + frage.f +
+      '\n\nREFERENZ-MUSTERLÖSUNG (Bewertungsmaßstab, nicht wörtlich verlangt):\n' + frage.muster +
+      '\n\nANTWORT DER PRÜFLINGS:\n' + antwort +
+      '\n\nBewerte die Antwort: vergib „punkte“ (0–' + FT_MAX + '), beurteile jedes der fünf Kriterien (' + FT_KRIT.join(', ') +
+      ') mit erfuellung „voll“/„teilweise“/„nicht“ und einem kurzen Kommentar, nenne Stärken, konkrete Verbesserungsvorschläge und eine knappe Gesamtbegründung.';
+
+    return fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: CLAUDE_MODELL,
+        max_tokens: 1500,
+        system: sys,
+        output_config: { format: { type: 'json_schema', schema: schema } },
+        messages: [{ role: 'user', content: userText }]
+      })
+    }).then(function (res) {
+      if (!res.ok) {
+        if (res.status === 401) throw new Error('Der API-Schlüssel wurde nicht akzeptiert. Bitte prüfe ihn in den Einstellungen.');
+        if (res.status === 429) throw new Error('Zu viele Anfragen an die KI. Bitte einen Moment warten und erneut versuchen.');
+        throw new Error('Die KI-Bewertung ist fehlgeschlagen (Fehler ' + res.status + ').');
+      }
+      return res.json();
+    }).then(function (data) {
+      if (data.stop_reason === 'refusal') throw new Error('Die KI konnte diese Antwort nicht bewerten.');
+      var txt = (data.content || []).filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('');
+      var parsed = JSON.parse(txt);
+      var p = Math.max(0, Math.min(FT_MAX, Math.round(parsed.punkte)));
+      return { punkte: p, max: FT_MAX, kriterien: parsed.kriterien || [], staerken: parsed.staerken || [], verbesserungen: parsed.verbesserungen || [], begruendung: parsed.begruendung || '', ki: true };
+    });
+  }
+
+  // ---------- Abschlussprüfung (Multiple-Choice + Freitext) ----------
   function zeigePruefung() {
     var main = document.getElementById('inhalt');
     main.innerHTML = '';
@@ -619,13 +729,300 @@
 
     var kopf = el('div', 'modul-kopf');
     kopf.setAttribute('data-screen-label', 'Abschlussprüfung');
-    kopf.innerHTML = '<p class="modul-tag">Prüfungssimulation</p><h1>Abschlussprüfung</h1>' +
-      '<p class="hero-sub">' + EXAM_ANZAHL + ' Fragen aus allen Modulen – eine Mischung aus schwereren und leichteren Fragen, jedes Mal neu zusammengestellt. Es kommen bevorzugt Fragen dran, die zuletzt nicht abgefragt wurden. Was du falsch beantwortest, sammelt sich unter „Meine Fehler“ zum gezielten Nachüben.</p>';
+    kopf.innerHTML = '<p class="modul-tag">Zertifizierungs-Simulation</p><h1>Abschlussprüfung</h1>' +
+      '<p class="hero-sub"><strong>Teil 1:</strong> ' + EXAM_ANZAHL + ' Multiple-Choice-Fragen aus allen Modulen (Mischung schwer/leicht, stark rotierend). ' +
+      '<strong>Teil 2:</strong> ' + FT_ANZAHL + ' Freitextfragen mit KI-Bewertung. ' +
+      'Die Gesamtnote zählt zu ' + Math.round(MC_GEWICHT * 100) + ' % aus Teil 1 und ' + Math.round(FT_GEWICHT * 100) + ' % aus Teil 2. Bestanden ab 80 %.</p>';
     main.appendChild(kopf);
 
-    var bereich = el('div', 'tab-inhalt');
-    main.appendChild(bereich);
-    zeichneQuiz(baueExam(), bereich, null, 'pruefung');
+    var mcFragen = baueExam();
+    var ftFragen = baueFreitext();
+
+    // Zustand
+    var mcGesamt = mcFragen.length;
+    var mcRichtig = 0, mcBeantwortet = 0;
+    var ftErgebnis = {};   // index -> { punkte, max } | undefined
+
+    // ===== Teil 1: Multiple Choice =====
+    var t1 = el('div', 'pruef-teil');
+    t1.innerHTML = '<h2><span class="teil-nr">1</span> Wissens-Check</h2>' +
+      '<p>' + mcGesamt + ' Fragen · Antwort anklicken, du bekommst sofort Rückmeldung. Falsche Antworten sammeln sich unter „Meine Fehler“.</p>';
+    main.appendChild(t1);
+
+    var mcListe = el('div', 'quiz-liste');
+    main.appendChild(mcListe);
+
+    mcFragen.forEach(function (q, qi) {
+      var fk = el('div', 'frage-karte');
+      fk.innerHTML = '<p class="frage-nr">Frage ' + (qi + 1) + ' / ' + mcGesamt + '</p><h3>' + q.f + '</h3>';
+      var optWrap = el('div', 'optionen');
+      var reihenfolge = mische(q.a.map(function (txt, i) { return { txt: txt, i: i }; }));
+      var gesperrt = false;
+      reihenfolge.forEach(function (o) {
+        var ob = el('button', 'option', o.txt);
+        ob.type = 'button';
+        ob.addEventListener('click', function () {
+          if (gesperrt) return;
+          gesperrt = true;
+          mcBeantwortet++;
+          var korrekt = o.i === q.k;
+          if (korrekt) {
+            mcRichtig++;
+          } else {
+            stand.fehler[q.f] = { f: q.f, a: q.a, k: q.k, e: q.e };
+            speichereStand(stand);
+          }
+          Array.prototype.forEach.call(optWrap.children, function (kind, ki) {
+            kind.disabled = true;
+            if (reihenfolge[ki].i === q.k) kind.classList.add('korrekt');
+          });
+          if (!korrekt) ob.classList.add('falsch');
+          fk.appendChild(el('div', 'erklaerung ' + (korrekt ? 'gut' : 'schlecht'),
+            '<strong>' + (korrekt ? 'Richtig!' : 'Leider nicht.') + '</strong> ' + q.e));
+          aktualisiereStatus();
+        });
+        optWrap.appendChild(ob);
+      });
+      fk.appendChild(optWrap);
+      mcListe.appendChild(fk);
+    });
+
+    // ===== Teil 2: Freitext =====
+    if (ftFragen.length) {
+      var t2 = el('div', 'pruef-teil');
+      t2.innerHTML = '<h2><span class="teil-nr">2</span> Freitext &amp; Transfer</h2>' +
+        '<p>' + ftFragen.length + ' anspruchsvolle Fragen. Schreibe deine Antwort und lass sie bewerten – du bekommst Punkte, eine Bewertung nach fünf Kriterien, eine Musterlösung und konkrete Verbesserungsvorschläge.</p>';
+      main.appendChild(t2);
+
+      // KI-Schlüssel-Panel
+      var kiPanel = el('div', 'ki-panel');
+      main.appendChild(kiPanel);
+      zeichneKiPanel(kiPanel);
+
+      ftFragen.forEach(function (frage, fi) {
+        var karte = el('div', 'ft-karte');
+        karte.innerHTML = '<div class="ft-kopf"><span class="ft-nr">Freitextfrage ' + (fi + 1) + ' / ' + ftFragen.length + '</span>' +
+          '<span class="ft-modul">' + frage.modul + '</span></div><h3>' + frage.f + '</h3>';
+        var ta = el('textarea');
+        ta.setAttribute('placeholder', 'Deine Antwort …');
+        ta.setAttribute('aria-label', 'Antwort auf Freitextfrage ' + (fi + 1));
+        karte.appendChild(ta);
+        var aktion = el('div', 'ft-aktion');
+        var btn = el('button', 'knopf primaer', 'Antwort bewerten');
+        btn.type = 'button';
+        aktion.appendChild(btn);
+        karte.appendChild(aktion);
+        var fb = el('div', 'ft-feedback');
+        fb.style.display = 'none';
+        karte.appendChild(fb);
+        main.appendChild(karte);
+
+        btn.addEventListener('click', function () {
+          var antwort = ta.value.trim();
+          if (antwort.length < 10) { ta.focus(); ta.style.borderColor = 'var(--rot)'; return; }
+          ta.style.borderColor = '';
+          if (holeKey()) {
+            aktion.innerHTML = '<span class="ft-laeuft"><span class="spin"></span> KI bewertet deine Antwort …</span>';
+            bewerteMitKI(frage, antwort).then(function (erg) {
+              ftErgebnis[fi] = { punkte: erg.punkte, max: erg.max };
+              zeigeKiFeedback(fb, frage, erg);
+              aktion.innerHTML = '';
+              ta.setAttribute('readonly', 'readonly');
+              aktualisiereStatus();
+            }).catch(function (err) {
+              aktion.innerHTML = '';
+              var msg = err && err.message === 'kein-key' ? 'Kein API-Schlüssel hinterlegt.' : (err && err.message) || 'Bewertung fehlgeschlagen.';
+              zeigeSelbstbewertung(fb, frage, fi, ftErgebnis, aktualisiereStatus, msg);
+            });
+          } else {
+            ta.setAttribute('readonly', 'readonly');
+            btn.style.display = 'none';
+            zeigeSelbstbewertung(fb, frage, fi, ftErgebnis, aktualisiereStatus, null);
+          }
+        });
+      });
+    }
+
+    // ===== Abschluss / Auswertung =====
+    var statusZeile = el('p', 'pruef-status');
+    var abschluss = el('div', 'pruef-abschluss');
+    var auswertenBtn = el('button', 'knopf primaer', 'Prüfung auswerten');
+    auswertenBtn.type = 'button';
+    abschluss.appendChild(auswertenBtn);
+    main.appendChild(abschluss);
+    main.appendChild(statusZeile);
+    var ergebnisBox = el('div');
+    main.appendChild(ergebnisBox);
+
+    function offeneFreitexte() {
+      var n = 0;
+      for (var i = 0; i < ftFragen.length; i++) if (!ftErgebnis[i]) n++;
+      return n;
+    }
+    function aktualisiereStatus() {
+      var mcOffen = mcGesamt - mcBeantwortet;
+      var ftOffen = offeneFreitexte();
+      var teile = [];
+      if (mcOffen > 0) teile.push(mcOffen + ' MC-Frage' + (mcOffen === 1 ? '' : 'n'));
+      if (ftOffen > 0) teile.push(ftOffen + ' Freitextfrage' + (ftOffen === 1 ? '' : 'n'));
+      statusZeile.textContent = teile.length ? 'Noch offen: ' + teile.join(' · ') : 'Alles beantwortet – du kannst die Prüfung auswerten.';
+    }
+    aktualisiereStatus();
+
+    auswertenBtn.addEventListener('click', function () {
+      var mcOffen = mcGesamt - mcBeantwortet;
+      var ftOffen = offeneFreitexte();
+      if (mcOffen > 0 || ftOffen > 0) {
+        statusZeile.textContent = 'Bitte erst alles beantworten – noch offen: ' +
+          (mcOffen > 0 ? mcOffen + ' MC' : '') + (mcOffen > 0 && ftOffen > 0 ? ', ' : '') + (ftOffen > 0 ? ftOffen + ' Freitext' : '') + '.';
+        statusZeile.style.color = 'var(--rot)';
+        return;
+      }
+      statusZeile.style.color = '';
+      zeigeGesamtergebnis(ergebnisBox, mcRichtig, mcGesamt, ftErgebnis, ftFragen.length);
+      auswertenBtn.disabled = true;
+      ergebnisBox.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function zeichneKiPanel(panel) {
+    panel.innerHTML = '';
+    if (holeKey()) {
+      panel.appendChild(el('span', 'ki-stat an', '✓ KI-Bewertung aktiv (Claude)'));
+      var aendern = el('button', 'knopf sekundaer', 'Schlüssel ändern');
+      aendern.type = 'button';
+      var entfernen = el('button', 'knopf leise', 'Entfernen');
+      entfernen.type = 'button';
+      aendern.addEventListener('click', function () { setzeKey(''); zeichneKiPanel(panel); panel.querySelector('input') && panel.querySelector('input').focus(); });
+      entfernen.addEventListener('click', function () { setzeKey(''); zeichneKiPanel(panel); });
+      panel.appendChild(aendern);
+      panel.appendChild(entfernen);
+    } else {
+      panel.appendChild(el('span', 'ki-stat aus', '○ KI-Bewertung nicht eingerichtet'));
+      var inp = el('input');
+      inp.type = 'password';
+      inp.placeholder = 'Anthropic API-Schlüssel (sk-ant-…)';
+      inp.autocomplete = 'off';
+      panel.appendChild(inp);
+      var speichern = el('button', 'knopf primaer', 'Speichern');
+      speichern.type = 'button';
+      speichern.addEventListener('click', function () {
+        var v = inp.value.trim();
+        if (v) { setzeKey(v); zeichneKiPanel(panel); }
+      });
+      inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') speichern.click(); });
+      panel.appendChild(speichern);
+      panel.appendChild(el('p', 'ki-hint', 'Ohne Schlüssel bekommst du nach dem Antworten die Musterlösung zum Selbst&shy;einschätzen. Der Schlüssel wird nur lokal in diesem Browser gespeichert und nur zur Bewertung an Anthropic gesendet.'));
+    }
+  }
+
+  function punkteKlasse(p, max) {
+    var q = p / max;
+    if (q >= 0.8) return 'gut';
+    if (q >= 0.5) return 'mittel';
+    return 'schwach';
+  }
+
+  function zeigeKiFeedback(fb, frage, erg) {
+    fb.style.display = '';
+    fb.innerHTML = '';
+    fb.appendChild(el('div', 'ft-punkte ' + punkteKlasse(erg.punkte, erg.max), '<b>' + erg.punkte + '</b> / ' + erg.max + ' Punkte'));
+
+    if (erg.kriterien && erg.kriterien.length) {
+      fb.appendChild(el('h4', null, 'Bewertung nach Kriterien'));
+      var ul = el('ul', 'ft-krit');
+      erg.kriterien.forEach(function (k) {
+        var cls = k.erfuellung === 'voll' ? 'k-voll' : (k.erfuellung === 'teilweise' ? 'k-teil' : 'k-nicht');
+        var ic = k.erfuellung === 'voll' ? '✓' : (k.erfuellung === 'teilweise' ? '~' : '✕');
+        ul.appendChild(el('li', null, '<span class="k-ic ' + cls + '">' + ic + '</span><span><span class="k-name">' + k.name + ':</span> ' + k.kommentar + '</span>'));
+      });
+      fb.appendChild(ul);
+    }
+    if (erg.begruendung) { fb.appendChild(el('h4', null, 'Begründung')); fb.appendChild(el('p', null, erg.begruendung)); }
+    if (erg.verbesserungen && erg.verbesserungen.length) {
+      fb.appendChild(el('h4', null, 'Verbesserungsvorschläge'));
+      var tl = el('ul', 'ft-tipps');
+      erg.verbesserungen.forEach(function (v) { tl.appendChild(el('li', null, v)); });
+      fb.appendChild(tl);
+    }
+    var muster = el('details', 'ft-muster');
+    muster.innerHTML = '<summary>Musterlösung anzeigen</summary><p>' + frage.muster + '</p>';
+    fb.appendChild(muster);
+  }
+
+  function zeigeSelbstbewertung(fb, frage, fi, ftErgebnis, onFertig, hinweis) {
+    fb.style.display = '';
+    fb.innerHTML = '';
+    if (hinweis) fb.appendChild(el('p', 'ft-fehler', hinweis + ' – bitte schätze dich anhand der Musterlösung selbst ein.'));
+    var muster = el('details', 'ft-muster');
+    muster.open = true;
+    muster.innerHTML = '<summary>Musterlösung &amp; Bewertungskriterien</summary><p>' + frage.muster + '</p>';
+    var kl = el('p', null, '<strong>Kriterien:</strong> ' + FT_KRIT.join(' · '));
+    muster.appendChild(kl);
+    fb.appendChild(muster);
+
+    var box = el('div', 'ft-selbst');
+    box.appendChild(el('label', null, 'Deine Selbsteinschätzung:'));
+    var sel = el('select');
+    for (var p = 0; p <= FT_MAX; p++) { var o = el('option', null, p + ' / ' + FT_MAX); o.value = String(p); sel.appendChild(o); }
+    sel.value = String(Math.round(FT_MAX * 0.6));
+    box.appendChild(sel);
+    var ok = el('button', 'knopf sekundaer', 'Übernehmen');
+    ok.type = 'button';
+    ok.addEventListener('click', function () {
+      ftErgebnis[fi] = { punkte: parseInt(sel.value, 10), max: FT_MAX, selbst: true };
+      box.innerHTML = '<span class="ft-punkte ' + punkteKlasse(ftErgebnis[fi].punkte, FT_MAX) + '"><b>' + ftErgebnis[fi].punkte + '</b> / ' + FT_MAX + ' Punkte (selbst eingeschätzt)</span>';
+      onFertig();
+    });
+    box.appendChild(ok);
+    fb.appendChild(box);
+    onFertig();
+  }
+
+  function zeigeGesamtergebnis(box, mcRichtig, mcGesamt, ftErgebnis, ftAnzahl) {
+    var mcPct = mcGesamt ? (mcRichtig / mcGesamt) * 100 : 0;
+    var ftPunkte = 0, ftMax = 0, ftSelbst = false;
+    for (var i = 0; i < ftAnzahl; i++) {
+      if (ftErgebnis[i]) { ftPunkte += ftErgebnis[i].punkte; ftMax += ftErgebnis[i].max; if (ftErgebnis[i].selbst) ftSelbst = true; }
+    }
+    var ftPct = ftMax ? (ftPunkte / ftMax) * 100 : 0;
+    var gesamt = ftAnzahl ? Math.round(MC_GEWICHT * mcPct + FT_GEWICHT * ftPct) : Math.round(mcPct);
+
+    var note;
+    if (gesamt >= 92) note = 'Hervorragend – sicher auf Zertifizierungs-Niveau!';
+    else if (gesamt >= 80) note = 'Bestanden – das sitzt fachlich.';
+    else if (gesamt >= 60) note = 'Knapp – sieh dir die schwächeren Punkte gezielt an.';
+    else note = 'Noch nicht bestanden – arbeite die Module und „Meine Fehler“ nochmal durch.';
+
+    box.innerHTML = '';
+    var karte = el('div', 'gesamt-karte' + (gesamt >= 80 ? ' bestanden' : ''));
+    karte.innerHTML =
+      '<div class="gesamt-kopf"><div class="ring" style="--p:' + gesamt + '"><span>' + gesamt + '%</span></div>' +
+      '<div><h3>Gesamtergebnis: ' + gesamt + ' %</h3><p>' + note + '</p></div></div>' +
+      '<div class="gesamt-teile">' +
+        '<div class="gesamt-teil"><div class="gt-label">Teil 1 · Multiple Choice (' + Math.round(MC_GEWICHT * 100) + ' %)</div>' +
+          '<div class="gt-wert">' + Math.round(mcPct) + ' %</div><div class="gt-detail">' + mcRichtig + ' von ' + mcGesamt + ' richtig</div></div>' +
+        (ftAnzahl ? '<div class="gesamt-teil"><div class="gt-label">Teil 2 · Freitext (' + Math.round(FT_GEWICHT * 100) + ' %)</div>' +
+          '<div class="gt-wert">' + Math.round(ftPct) + ' %</div><div class="gt-detail">' + ftPunkte + ' von ' + ftMax + ' Punkten' + (ftSelbst ? ' (teils selbst eingeschätzt)' : '') + '</div></div>' : '') +
+      '</div>';
+    box.appendChild(karte);
+
+    var knoepfe = el('div', 'ergebnis-aktionen');
+    var neu = el('button', 'knopf primaer', 'Neue Prüfung starten');
+    neu.type = 'button';
+    neu.addEventListener('click', zeigePruefung);
+    knoepfe.appendChild(neu);
+    if (Object.keys(stand.fehler || {}).length) {
+      var zuFehler = el('button', 'knopf sekundaer', 'Meine Fehler üben');
+      zuFehler.type = 'button';
+      zuFehler.addEventListener('click', function () { location.hash = '#/fehler'; });
+      knoepfe.appendChild(zuFehler);
+    }
+    box.appendChild(knoepfe);
+
+    if (gesamt > (stand.examBest || 0)) { stand.examBest = gesamt; speichereStand(stand); }
+    zeichneKopf();
+    zeichneSeitenleiste('pruefung');
   }
 
   // ---------- Meine Fehler ----------

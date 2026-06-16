@@ -482,6 +482,71 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
   .modul-karte:hover{transform:none}
   .knopf:active,.modul-karte:active{transform:none}
 }
+/* ---------- Abschlussprüfung: Teile & Freitext ---------- */
+.pruef-teil{margin:30px 0 10px}
+.pruef-teil h2{display:flex;align-items:center;gap:10px;font-size:1.25rem;margin:0 0 4px}
+.pruef-teil .teil-nr{flex:0 0 30px;height:30px;border-radius:50%;background:var(--akzent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Fredoka',sans-serif;font-size:.95rem}
+.pruef-teil p{margin:0 0 6px;color:var(--leise);font-size:.92rem}
+
+.ki-panel{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;background:var(--bg2);border:1px solid var(--linie);border-radius:14px;padding:12px 16px;margin:6px 0 18px}
+.ki-panel .ki-stat{font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:7px}
+.ki-panel .ki-stat.an{color:var(--gruen)}
+.ki-panel .ki-stat.aus{color:var(--leise)}
+.ki-panel .ki-hint{flex:1 1 100%;font-size:.82rem;color:var(--leise);margin:0}
+.ki-panel input[type=password]{flex:1 1 220px;border:1px solid var(--linie);border-radius:10px;padding:8px 12px;font-family:inherit;font-size:.9rem;background:var(--karte);color:var(--tinte)}
+.ki-panel .knopf{padding:8px 16px;font-size:.85rem}
+
+.ft-karte{background:var(--karte);border:1px solid var(--linie);border-radius:var(--radius);padding:18px 20px;margin-bottom:16px;box-shadow:var(--schatten)}
+.ft-kopf{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.ft-nr{font-size:.78rem;font-weight:800;color:var(--akzent-dunkel);text-transform:uppercase;letter-spacing:.04em}
+.ft-modul{font-size:.74rem;font-weight:800;color:var(--leise);background:var(--bg2);padding:3px 10px;border-radius:99px}
+.ft-karte h3{margin:6px 0 12px;font-size:1.05rem;line-height:1.45;font-family:'Nunito',sans-serif;font-weight:700;color:var(--tinte)}
+.ft-karte textarea{width:100%;min-height:120px;border:1px solid var(--linie);border-radius:12px;padding:12px 14px;font-family:inherit;font-size:.95rem;line-height:1.5;color:var(--tinte);background:var(--bg);resize:vertical}
+.ft-karte textarea:focus{outline:none;border-color:var(--akzent);background:var(--karte)}
+.ft-aktion{margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.ft-laeuft{display:inline-flex;align-items:center;gap:9px;color:var(--leise);font-size:.9rem;font-weight:700}
+.ft-laeuft .spin{width:15px;height:15px;border:2.5px solid var(--akzent-hell);border-top-color:var(--akzent);border-radius:50%;animation:ftspin .7s linear infinite}
+@keyframes ftspin{to{transform:rotate(360deg)}}
+
+.ft-feedback{margin-top:14px;border-top:1px dashed var(--linie);padding-top:14px;animation:ftein .25s ease}
+@keyframes ftein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.ft-punkte{display:inline-flex;align-items:baseline;gap:6px;background:var(--akzent-hell);color:var(--akzent-dunkel);border-radius:99px;padding:5px 14px;font-family:'Fredoka',sans-serif;font-weight:600;margin-bottom:10px}
+.ft-punkte.gut{background:var(--gruen-hell);color:var(--gruen)}
+.ft-punkte.mittel{background:#FBEFD6;color:#9A7218}
+.ft-punkte.schwach{background:var(--rot-hell);color:var(--rot)}
+.ft-punkte b{font-size:1.25rem}
+.ft-feedback h4{margin:14px 0 6px;font-size:.92rem;font-family:'Nunito',sans-serif;font-weight:800;color:var(--tinte)}
+.ft-krit{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.ft-krit li{display:flex;gap:9px;align-items:flex-start;font-size:.9rem;line-height:1.4}
+.ft-krit .k-ic{flex:0 0 auto;width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;color:#fff;margin-top:1px}
+.ft-krit .k-voll{background:var(--gruen)}
+.ft-krit .k-teil{background:var(--gelb)}
+.ft-krit .k-nicht{background:var(--rot)}
+.ft-krit .k-name{font-weight:700}
+.ft-feedback p{margin:4px 0;font-size:.9rem;line-height:1.5;color:var(--tinte)}
+.ft-feedback ul.ft-tipps{margin:4px 0 0;padding-left:20px}
+.ft-feedback ul.ft-tipps li{font-size:.9rem;line-height:1.45;margin-bottom:3px}
+.ft-muster{background:var(--bg2);border-radius:12px;padding:12px 14px;margin-top:10px}
+.ft-muster summary{cursor:pointer;font-weight:800;font-size:.9rem;color:var(--akzent-dunkel)}
+.ft-muster[open] summary{margin-bottom:8px}
+.ft-muster p{margin:0;font-size:.9rem;line-height:1.55;color:var(--tinte)}
+.ft-selbst{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px;background:var(--bg);border:1px solid var(--linie);border-radius:12px;padding:10px 14px}
+.ft-selbst label{font-size:.88rem;font-weight:700;color:var(--tinte)}
+.ft-selbst select{border:1px solid var(--linie);border-radius:9px;padding:7px 10px;font-family:inherit;font-size:.9rem;background:var(--karte);color:var(--tinte)}
+.ft-fehler{color:var(--rot);font-size:.86rem;font-weight:700;margin:0 0 8px}
+
+.pruef-abschluss{position:sticky;bottom:14px;display:flex;justify-content:center;margin-top:24px;z-index:5}
+.pruef-abschluss .knopf{box-shadow:0 6px 20px rgba(168,85,49,.3)}
+.pruef-status{text-align:center;color:var(--leise);font-size:.86rem;margin:8px 0 0}
+.gesamt-karte{background:var(--karte);border:1px solid var(--linie);border-radius:calc(var(--radius) + 4px);padding:24px;box-shadow:var(--schatten);margin-top:8px}
+.gesamt-karte.bestanden{background:linear-gradient(180deg,var(--gruen-hell),var(--karte) 70%)}
+.gesamt-kopf{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.gesamt-kopf h3{margin:0;font-size:1.35rem}
+.gesamt-teile{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
+.gesamt-teil{flex:1 1 180px;background:var(--bg);border:1px solid var(--linie);border-radius:14px;padding:14px 16px}
+.gesamt-teil .gt-label{font-size:.8rem;color:var(--leise);font-weight:700}
+.gesamt-teil .gt-wert{font-family:'Fredoka',sans-serif;font-size:1.5rem;color:var(--akzent-dunkel)}
+.gesamt-teil .gt-detail{font-size:.78rem;color:var(--leise)}
 </style>
 </head>
 <body>
@@ -503,6 +568,7 @@ ul.checkliste li::before{content:'✓';position:absolute;left:0;top:6px;width:20
 <script src="js/inhalte-c.js"></script>
 <script src="js/inhalte-d.js"></script>
 <script src="js/quizfragen.js"></script>
+<script src="js/freitextfragen.js"></script>
 <script src="js/karteikarten.js"></script>
 <script src="js/grafiken.js"></script>
 <script src="js/inhalte-e.js"></script>
