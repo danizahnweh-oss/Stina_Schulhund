@@ -600,43 +600,56 @@
     return alle;
   }
 
-  // Stellt die Prüfung zusammen: feste Mischung aus schweren (d:3) und
-  // leichteren Fragen. Bevorzugt dabei Fragen, die zuletzt NICHT dran
-  // waren – so erneuert sich die Prüfung stark, statt sich zu wiederholen.
+  // Stellt die Prüfung zusammen – MODUL-AUSGEWOGEN: die Fragen werden im
+  // Round-Robin breit über alle Module verteilt (kein Themen-Klumpen), und
+  // innerhalb jedes Moduls kommen FRISCHE (zuletzt nicht gezeigte) Fragen
+  // zuerst. So variiert jede Prüfung deutlich und wiederholt sich erst, wenn
+  // der ganze Pool durch ist.
   function baueExam() {
-    var alle = alleFragen();
-    var schwer = alle.filter(function (q) { return q.d === 3; });
-    var rest = alle.filter(function (q) { return q.d !== 3; });
+    var mids = Object.keys(QUIZ).filter(function (m) { return QUIZ[m] && QUIZ[m].length; });
+    var gesamt = 0;
+    mids.forEach(function (m) { gesamt += QUIZ[m].length; });
 
     var gesehen = stand.examGesehen || [];
-    var gesehenSet = {};
-    gesehen.forEach(function (k) { gesehenSet[k] = true; });
+    var gs = {};
+    gesehen.forEach(function (k) { gs[k] = true; });
 
-    // aus einer Liste n Fragen ziehen – zuletzt gezeigte kommen zuletzt
-    function ziehe(liste, n, schon) {
-      var frisch = mische(liste.filter(function (q) { return !gesehenSet[q.f] && !schon[q.f]; }));
-      var alt = mische(liste.filter(function (q) { return gesehenSet[q.f] && !schon[q.f]; }));
-      return frisch.concat(alt).slice(0, n);
-    }
-
-    var schon = {};
+    var used = {};
     var auswahl = [];
-    function nimm(liste, n) {
-      ziehe(liste, n, schon).forEach(function (q) { schon[q.f] = true; auswahl.push(q); });
+
+    // Reihum über die Module ziehen. filterFn schränkt auf z. B. schwere
+    // Fragen ein; freshOnly = true nimmt nur frische (keine Wiederholungen).
+    function rrPick(filterFn, n, freshOnly) {
+      if (n <= 0) return;
+      var queues = {};
+      mische(mids).forEach(function (m) {
+        var pool = QUIZ[m].filter(function (q) { return (!filterFn || filterFn(q)) && !used[q.f]; });
+        var frisch = mische(pool.filter(function (q) { return !gs[q.f]; }));
+        var alt = mische(pool.filter(function (q) { return gs[q.f]; }));
+        queues[m] = freshOnly ? frisch : frisch.concat(alt);
+      });
+      var order = mische(Object.keys(queues));
+      var added = 0, weiter = true;
+      while (added < n && weiter) {
+        weiter = false;
+        for (var i = 0; i < order.length && added < n; i++) {
+          var arr = queues[order[i]];
+          while (arr && arr.length) {
+            var q = arr.shift();
+            if (used[q.f]) continue;
+            used[q.f] = true; auswahl.push(q); added++; weiter = true; break;
+          }
+        }
+      }
     }
 
-    // Nur so viele schwere Fragen, wie es noch FRISCHE (zuletzt nicht gezeigte)
-    // gibt – sind keine frischen schweren mehr da, füllen frische Standard-/
-    // Szenariofragen die Plätze, statt schwere zu wiederholen. So bleibt die
-    // Prüfung frisch, bis der ganze Pool durchlaufen ist.
-    var schwerFrisch = schwer.filter(function (q) { return !gesehenSet[q.f]; }).length;
-    nimm(schwer, Math.min(EXAM_SCHWER, schwerFrisch));
-    nimm(rest, EXAM_ANZAHL - auswahl.length);
-    if (auswahl.length < EXAM_ANZAHL) nimm(alle, EXAM_ANZAHL - auswahl.length); // Auffüllen (notfalls auch Wiederholungen)
+    rrPick(function (q) { return q.d === 3; }, EXAM_SCHWER, true);          // frische schwere, breit verteilt
+    rrPick(function (q) { return q.d !== 3; }, EXAM_ANZAHL - auswahl.length, true); // frische Standard-/Szenariofragen, breit verteilt
+    if (auswahl.length < EXAM_ANZAHL) rrPick(null, EXAM_ANZAHL - auswahl.length, false); // Auffüllen (notfalls Wiederholungen)
 
     // Historie fortschreiben: gewählte Fragen als „zuletzt gesehen" merken,
     // aber immer genug übrig lassen, damit weiter rotiert werden kann.
-    var maxHist = Math.max(0, alle.length - EXAM_ANZAHL);
+    var maxHist = Math.max(0, gesamt - EXAM_ANZAHL);
     var neu = gesehen.slice();
     auswahl.forEach(function (q) {
       var i = neu.indexOf(q.f);
