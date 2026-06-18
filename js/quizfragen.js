@@ -294,3 +294,88 @@ gewoehnung: [
     SCHWER[mid].forEach(function (q) { q.d = 3; window.QUIZ[mid].push(q); });
   });
 })();
+
+// ──────────────────────────────────────────────────────────────────────
+// Weitere schwere Fragen (d: 3) – vergrößern den Pool, damit sich in der
+// Abschlussprüfung auch über viele Durchgänge nichts wiederholt.
+// ──────────────────────────────────────────────────────────────────────
+(function () {
+  var SCHWER2 = {
+
+    grundlagen: [
+      { f: 'Ordne die Heimtiere 2024 nach Häufigkeit (häufigste zuerst).', a: ['Hunde > Katzen > Kleintiere', 'Katzen > Hunde > Kleintiere > Ziervögel', 'Katzen > Kleintiere > Hunde', 'Hunde > Kleintiere > Katzen'], k: 1, e: '2024: Katzen 15,9 Mio., Hunde 10,5 Mio., Kleintiere 4,3 Mio., Ziervögel 3,2 Mio.' },
+      { f: 'Welche Aussage zu Hunden als „Arbeitstieren“ trifft laut Skript zu?', a: ['Hunde können nach spezifischem Training Corona in menschlichen Speichelproben erkennen (TiHo Hannover)', 'Hunde dürfen rechtlich nicht arbeiten', 'Spürhunde gibt es nur beim Militär', 'Hunde können keine Krankheiten erkennen'], k: 0, e: 'Eine Studie der Tierärztlichen Hochschule Hannover zeigte: Hunde erkennen nach spezifischem Training das Coronavirus in menschlichen Speichelproben; Hunde arbeiten in vielen Berufsfeldern.' }
+    ],
+
+    begriffe: [
+      { f: 'Mai 2024: Die „Selbstverpflichtung“ soll 36 €/Jahr kosten. Wie reagierte der Verein laut Zeitleiste?', a: ['Er schaffte sie ersatzlos ab', 'Er bietet stattdessen ein kostenloses „Qualitätsversprechen“ an', 'Er erhöhte den Beitrag auf 100 €', 'Es änderte sich nichts'], k: 1, e: 'Statt der kostenpflichtigen Selbstverpflichtung (36 €/Jahr) bietet der Verein ein kostenloses Qualitätsversprechen an.' },
+      { f: 'Worin unterscheidet sich ein Assistenzhund grundlegend von einem Therapiebegleithund?', a: ['Der Assistenzhund ist für EINE bestimmte Person ausgebildet und begleitet sie im Alltag; der Therapiebegleithund unterstützt einen Therapeuten in dessen Arbeit', 'Es gibt keinen Unterschied', 'Der Assistenzhund arbeitet nur in Kliniken', 'Der Therapiebegleithund gehört dem Patienten'], k: 0, e: 'Assistenzhunde (z. B. Blindenführ-, Diabeteswarnhund) werden für eine bestimmte Person ausgebildet; Therapiebegleithunde begleiten einen Therapeuten bei seiner Arbeit.' }
+    ],
+
+    bindung: [
+      { f: 'Wie kam es laut Dr. Dorit Feddersen-Petersen zur Domestikation des Wolfs?', a: ['Wölfe wurden in wenigen Jahren gewaltsam gezähmt', 'Menschen merkten den Nutzen der Wölfe; über Jahrtausende folgte gezielte Züchtung und Selektion', 'Hunde domestizierten sich völlig ohne Zutun des Menschen', 'Es war reiner Zufall ohne jede Selektion'], k: 1, e: 'Feddersen-Petersen: Menschen merkten, dass Wölfe nützlich sein können; über Jahrtausende wurden sie durch gezielte Züchtung und Selektion zum Hund.' },
+      { f: 'Was ist laut Skript bei der Einschätzung der Hundebefindlichkeit durch Training möglich?', a: ['Gar keine Verbesserung', 'Eine nahezu 100 % richtige Einschätzung der Hundebefindlichkeit', 'Nur Kinder können es erlernen', 'Es ist nur mit Messgeräten möglich'], k: 1, e: '„Durch Training können Erwachsene eine nahezu 100 Prozent richtige Einschätzung der Hundebefindlichkeit erlernen.“ Gleiche Handlungserfahrungen sind der Schlüssel.' }
+    ],
+
+    wirkmechanismen: [
+      { f: 'Was beschreibt die „magische Brücke“ zwischen Kind und Tier?', a: ['Eine Trainingsmethode', 'Kinder fühlen sich magisch von Lebewesen angezogen und sehen Tiere als „kleine Personen“ – die Verbindung bleibt in der Entwicklung bestehen', 'Ein bestimmtes Spielgerät', 'Eine Hunderasse'], k: 1, e: 'Die „magische Brücke“ (Wohlfarth/Mutschler, Beetz): Kinder fühlen sich magisch von Lebewesen angezogen; Tiere sind für sie „kleine Personen“, die Verbindung bleibt bestehen.' },
+      { f: 'Was ist laut Skript die „Geheimwaffe“ der Hunde im pädagogischen Kontext?', a: ['Dass sie viele Tricks können', 'Sie zeigen sich echt (verstellen sich nicht) und bewerten ihr Gegenüber nicht nach Aussehen, Status, Intelligenz oder Besitz', 'Dass sie immer fröhlich sind', 'Dass sie aufs Wort gehorchen'], k: 1, e: 'Die „Geheimwaffe“: Ein Hund zeigt sich so, wie er sich fühlt – seine Zu-/Abneigung ist echt; und er bewertet niemanden nach Aussehen, sozialem Status, Intelligenz oder Besitz.' }
+    ],
+
+    lernverhalten: [
+      { f: 'Ein Hund wird beim Anspringen mit dem Knie weggestoßen („etwas Unangenehmes kommt hinzu“). Welcher Quadrant und welche Emotion?', a: ['Positive Strafe – Angst', 'Negative Belohnung – Erleichterung', 'Positive Belohnung – Freude', 'Negative Strafe – Frustration'], k: 0, e: 'Positive Strafe: Etwas Unangenehmes kommt hinzu; Emotion: Angst. Im Schulhundtraining vermeiden – wir bleiben in der positiven Verstärkung.' },
+      { f: 'Warum sollten sich zwei Hörzeichen nicht stark ähneln?', a: ['Aus ästhetischen Gründen', 'Wegen der Gefahr des „Überschattens“ – ähnliche Signale werden verwechselt/überlagert', 'Weil Hunde kurze Wörter nicht mögen', 'Das spielt keine Rolle'], k: 1, e: 'Signale dürfen sich nicht überschatten; verwende Hörzeichen, die sich nicht stark ähneln. Nach erfolgreicher Verknüpfung folgt die Generalisierung.' }
+    ],
+
+    markertraining: [
+      { f: 'Warum solltest du beim Aufbau des Markerworts die Positionen (Hund sitzt / Mensch steht …) immer mal verändern?', a: ['Damit es schwieriger wird', 'Weil Hunde die Gesamtsituation schnell „mitverknüpfen“ – sonst hängt der Marker an einer bestimmten Konstellation', 'Aus sportlichen Gründen', 'Das ist nicht nötig'], k: 1, e: 'Positionen variieren, weil Hunde die Situation schnell mitverknüpfen – sonst ist der Marker an eine bestimmte Position gebunden.' },
+      { f: 'Bei der Übung „Blickkontakt verstärken“ hältst du Futter in der weit ausgestreckten Hand. Wann markerst und belohnst du?', a: ['Wenn der Hund auf die Futterhand starrt', 'In dem Moment, in dem der Hund DICH ansieht (nicht die Hand)', 'Sofort beim Hinhalten', 'Wenn der Hund bellt'], k: 1, e: 'Die Futterhand bleibt verschlossen; sobald der Hund von der Hand zu DIR aufsieht, wird gemarkert und belohnt – so wird Blickkontakt verstärkt.' }
+    ],
+
+    belohnungen: [
+      { f: 'Dein Hund lässt sich von fressbarem Unrat abrufen. Welche Belohnung passt zur Bedürfnislage besonders gut?', a: ['Ein Zerrspiel', 'Eine Futtertube (etwas Fressbares)', 'Distanz zum Unrat', 'Ein geworfener Ball'], k: 1, e: 'Der Hund war in Aufnahme-/Fressmotivation – passend ist z. B. eine Futtertube; die Belohnung soll der momentanen Bedürfnislage entsprechen.' },
+      { f: 'Was kennzeichnet „primäre Verstärker“?', a: ['Sie müssen erst mühsam erlernt werden', 'Sie sind „angeborenermaßen“ toll und müssen nicht erlernt werden', 'Es sind ausschließlich Clicker', 'Es sind ausschließlich Spielzeuge'], k: 1, e: 'Primäre Verstärker sind angeborenermaßen attraktiv; man kann den Hund mit allem belohnen, was er lieber mag als das, was er gerade tut.' }
+    ],
+
+    signale: [
+      { f: 'Wozu dient die „Ablenkungs-/Generalisierungsliste“ (Stufe 1–20) im Signalaufbau?', a: ['Zur Bewertung des Hundes', 'Als Hilfsmittel, um Ablenkungen systematisch und aufsteigend zu steigern', 'Zur Berechnung der Futtermenge', 'Für die Elterninformation'], k: 1, e: 'Die Generalisierungsliste ordnet Ablenkungen aufsteigend (Stufe 1–20, am Ende „Doktorarbeit“/„Professur“), um Signale systematisch unter steigender Ablenkung zu festigen.' },
+      { f: 'Wie wird der Seitenwechsel aufgebaut – wohin lockst du den Hund?', a: ['Vor deinen Bauch', 'Hinter deinen Rücken auf die andere Seite, zunächst mit Leckerchen gelockt', 'Über deinen Kopf', 'Im Sitzen seitlich'], k: 1, e: 'Der Hund wird mit Leckerchen hinter dem Rücken auf die andere Seite gelockt; später leere Hand + Wortsignal, die Handbewegung wird immer kürzer.' }
+    ],
+
+    stress: [
+      { f: 'Ein bestimmter Geruch löst bei deinem Hund plötzlich Stress aus, obwohl aktuell nichts passiert. Welches Konzept erklärt das?', a: ['Das Premack-Prinzip', 'Das Stressgedächtnis – Reize werden mit Emotionen verknüpft und als Negativerfahrung gespeichert', 'Habituation', 'Die Du-Evidenz'], k: 1, e: 'Stressgedächtnis: Werden stressauslösende Reize mit Emotionen verknüpft, können bestimmte Reize, Gerüche oder Personen künftig Stress auslösen.' },
+      { f: 'Überforderung, Zeitdruck und Isolation gehören zu welcher Stressoren-Kategorie?', a: ['Äußere Stressoren', 'Leistungs- und soziale Stressoren', 'Körperliche Stressoren', 'Zu keiner Kategorie'], k: 1, e: 'Leistungs- & soziale Stressoren: Über-/Unterforderung, Zeitdruck, Konflikte, Isolation/Trennung, Sozialkontakte, Zurechtweisung/Strafe.' }
+    ],
+
+    koerpersprache: [
+      { f: 'Welche Zuordnung der Panksepp-Basisemotionen ist korrekt?', a: ['Care = Angst', 'Play = soziale Freude; Care = Fürsorge; Panic/Grief = Trauer', 'Rage = Vorfreude', 'Fear = Spiel'], k: 1, e: 'Play = soziale Freude, Care = Fürsorge, Panic/Grief = Trauer, Seeking = Erwartung/Vorfreude, Fear = Angst, Rage = Ärger/Wut, Lust = sexuelle Erregung.' },
+      { f: 'Ein Hund liegt über seinem Kauknochen, Kinn darüber, Blick zum sich Nähernden (Weiß im Auge), Körper angespannt. Was zeigt er?', a: ['Eine Spielaufforderung', 'Ressourcensicherung („Meins!“)', 'Aktive Demut', 'Erkundungsverhalten'], k: 1, e: 'Ressourcensicherung: Blick zum Nähernden (oft Weiß im Auge), Kopf/Kinn über die Ressource, angespannter Körper, ggf. Lefzenhochziehen.' }
+    ],
+
+    'verhalten-schule': [
+      { f: 'Stimmt es, dass man unerwünschtes Verhalten einfach immer ignorieren sollte?', a: ['Ja, Ignorieren klappt immer', 'Nein – Ignorieren hilft nicht in allen Situationen; es kommt auf Situation und Bedürfnisse des Hundes an', 'Ja, außer bei Welpen', 'Nein, man muss immer strafen'], k: 1, e: 'Ein Ignorieren des unerwünschten Verhaltens hilft nicht in allen Situationen – es kommt auf die Situation und die Bedürfnisse des Hundes an.' },
+      { f: 'In welchem schulischen Umfeld sollte der Schulhund wegen vieler Reize und Gefahren NICHT eingesetzt werden?', a: ['Im ruhigen, vorbereiteten Klassenzimmer', 'In Chemie-/Werkräumen, Schulküchen oder Turnhallen', 'Auf seiner Ruhedecke', 'Im eigenen Klassenzimmer mit klaren Regeln'], k: 1, e: 'Schulische „Spezialräume“ (Chemie-, Werk-, Technik-, Biologieräume, Schulküchen, Turnhallen) und Orte mit vielen Reizen eignen sich nicht – hier gilt Management statt Training.' }
+    ],
+
+    'regeln-interaktionen': [
+      { f: 'Einige Kinder neigen dazu, den Hund zu umarmen. Welche Regelvariante gilt dann?', a: ['2 Kinder pro Hund', 'Die „1 Hund – 1 Hand“-Regel', 'Umarmen ist dann erlaubt', 'Es braucht keine Regel'], k: 1, e: 'Wenn Schüler zum Umarmen neigen, gilt die „1 Hund – 1 Hand“-Regel statt „1 Hund – 1 Kind“.' },
+      { f: 'Der Hund würfelt im Unterricht Aufgaben für die Klasse. Welche der drei Interaktionsformen ist das?', a: ['Freie Interaktion', 'Aktive Unterrichtsbeteiligung', 'Interaktion ohne Unterrichtsbezug', 'Tricktraining'], k: 1, e: 'Aktive Unterrichtsbeteiligung: Der Hund wird gezielt in Unterrichtsthemen eingebunden (würfelt Aufgaben, bringt Materialien). Freie Interaktion = freies Bewegen; ohne Unterrichtsbezug = Futtersuchspiele/Tricks.' }
+    ],
+
+    'recht-konzept': [
+      { f: 'Wie oft erfolgt laut Hygieneplan-Praxis i. d. R. die Tierarztvorstellung – und wo wird die Einsatzfähigkeit bestätigt?', a: ['Jährlich, im Impfpass', 'Alle 3 Monate, bestätigt im Schulhundlogbuch', 'Monatlich, nur mündlich', 'Gar nicht'], k: 1, e: 'Tierarztvorstellung i. d. R. alle 3 Monate; der Tierarzt bestätigt die Einsatzfähigkeit im Schulhundlogbuch (Gesundheit, Impfungen, frei von Endo-/Ektoparasiten).' },
+      { f: 'Zu welchen Räumen darf der Schulhund laut Hygieneplan KEINEN Zutritt haben?', a: ['Zum eigenen Klassenzimmer', 'Zu Küchen/Lebensmittelräumen, Wäschelagern und Räumen von Personen mit Hundeallergie oder Immunschwäche', 'Zum Schulhof', 'Zu seiner Ruhezone'], k: 1, e: 'Kein Zutritt zu Küchen/Räumen mit Lebensmittelverarbeitung, Wäschelagern und Räumen von Personen mit bekannter Hundeallergie oder akuter Erkrankung/Immunschwäche.' }
+    ],
+
+    gewoehnung: [
+      { f: 'Warum ist der Gewöhnungsschritt „Unterrichtsstunde bei einer anderen Lehrkraft“ sinnvoll?', a: ['Damit der Hund die andere Lehrkraft mag', 'Weil du deine Aufmerksamkeit ganz auf den Hund richten kannst, während er „normalen“ Unterricht beobachtet', 'Damit die Klasse frei hat', 'Das ist gar nicht vorgesehen'], k: 1, e: 'Bei einer anderen Lehrkraft kann die eigene Aufmerksamkeit ganz auf den Hund gerichtet werden; er beobachtet ruhig den Unterricht (Ruhedecke) und wird nicht eingebunden/kontaktiert.' },
+      { f: 'Was passiert, wenn der Hund bei der Gewöhnung zu stark gestresst wird, statt neutral zu reagieren?', a: ['Nichts Besonderes', 'Statt Gewöhnung tritt Sensibilisierung ein – er reagiert immer verstörter', 'Er gewöhnt sich dadurch schneller', 'Er wird einfach müde'], k: 1, e: 'Wird der Reiz zu stark, tritt statt Gewöhnung Sensibilisierung ein: Der Hund reagiert empfindlicher/verstörter; bei Reizüberflutung droht „Flooding“.' }
+    ]
+
+  };
+
+  Object.keys(SCHWER2).forEach(function (mid) {
+    if (!window.QUIZ[mid]) window.QUIZ[mid] = [];
+    SCHWER2[mid].forEach(function (q) { q.d = 3; window.QUIZ[mid].push(q); });
+  });
+})();
