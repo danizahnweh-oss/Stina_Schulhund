@@ -625,9 +625,14 @@
       ziehe(liste, n, schon).forEach(function (q) { schon[q.f] = true; auswahl.push(q); });
     }
 
-    nimm(schwer, Math.min(EXAM_SCHWER, schwer.length));
+    // Nur so viele schwere Fragen, wie es noch FRISCHE (zuletzt nicht gezeigte)
+    // gibt – sind keine frischen schweren mehr da, füllen frische Standard-/
+    // Szenariofragen die Plätze, statt schwere zu wiederholen. So bleibt die
+    // Prüfung frisch, bis der ganze Pool durchlaufen ist.
+    var schwerFrisch = schwer.filter(function (q) { return !gesehenSet[q.f]; }).length;
+    nimm(schwer, Math.min(EXAM_SCHWER, schwerFrisch));
     nimm(rest, EXAM_ANZAHL - auswahl.length);
-    if (auswahl.length < EXAM_ANZAHL) nimm(alle, EXAM_ANZAHL - auswahl.length); // Auffüllen
+    if (auswahl.length < EXAM_ANZAHL) nimm(alle, EXAM_ANZAHL - auswahl.length); // Auffüllen (notfalls auch Wiederholungen)
 
     // Historie fortschreiben: gewählte Fragen als „zuletzt gesehen" merken,
     // aber immer genug übrig lassen, damit weiter rotiert werden kann.
