@@ -7,6 +7,7 @@
   var KARTEN = window.KARTEN || {};
   var GRAFIK = window.GRAFIK || {};
   var SKEY = 'shb-lern-fortschritt-v1';
+  var MODUL_QUIZ_ANZAHL = 10;   // Fragen pro Modul-Quiz – zufällig aus dem Pool gezogen
 
   // Farbe + Icon je Modul
   var META = {
@@ -278,7 +279,13 @@
     main.appendChild(bereich);
 
     if (tab === 'lernen') zeichneLernen(m, bereich);
-    else if (tab === 'quiz') zeichneQuiz(QUIZ[m.id] || [], bereich, m.id, 'modul');
+    else if (tab === 'quiz') {
+      // Bei jedem Aufruf/Neuladen eine zufällige Auswahl aus allen Modulfragen
+      // ziehen – so mischt sich das Quiz und ist jedes Mal anders.
+      var alleQ = QUIZ[m.id] || [];
+      var quizQ = mische(alleQ).slice(0, Math.min(MODUL_QUIZ_ANZAHL, alleQ.length));
+      zeichneQuiz(quizQ, bereich, m.id, 'modul');
+    }
     else zeichneKarten(m, bereich);
   }
 
