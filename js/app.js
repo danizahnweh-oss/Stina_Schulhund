@@ -7,7 +7,7 @@
   var KARTEN = window.KARTEN || {};
   var GRAFIK = window.GRAFIK || {};
   var SKEY = 'shb-lern-fortschritt-v1';
-  var MODUL_QUIZ_ANZAHL = 10;   // Fragen pro Modul-Quiz – zufällig aus dem Pool gezogen
+  var MODUL_QUIZ_ANZAHL = 6;    // Fragen pro Modul-Quiz-Runde – rotierend aus dem Pool gezogen
 
   // Farbe + Icon je Modul
   var META = {
@@ -84,6 +84,7 @@
   stand.fehler = stand.fehler || {};
   stand.examGesehen = stand.examGesehen || [];
   stand.ftGesehen = stand.ftGesehen || [];
+  stand.quizGesehen = stand.quizGesehen || {};
   if (!stand.pruefungsDatum) { stand.pruefungsDatum = '2026-06-18'; speichereStand(stand); }
 
   function quizBest(id) { return (stand.quiz[id] && stand.quiz[id].best) || 0; }
@@ -114,6 +115,28 @@
       var t = a[i]; a[i] = a[j]; a[j] = t;
     }
     return a;
+  }
+
+  // Wählt `anzahl` Fragen rotierend aus `alle`: zuletzt gezeigte (in `gesehen`,
+  // Liste von Fragetexten) kommen zuletzt dran, sodass beim Wiederholen
+  // bevorzugt andere Fragen erscheinen und der ganze Pool durchlaufen wird,
+  // bevor sich etwas wiederholt. Gibt die Auswahl + aktualisierte Historie zurück.
+  function waehleRotierend(alle, anzahl, gesehen) {
+    gesehen = gesehen || [];
+    var gs = {};
+    gesehen.forEach(function (k) { gs[k] = true; });
+    var frisch = mische(alle.filter(function (q) { return !gs[q.f]; }));
+    var alt = mische(alle.filter(function (q) { return gs[q.f]; }));
+    var auswahl = frisch.concat(alt).slice(0, Math.min(anzahl, alle.length));
+    var maxHist = Math.max(0, alle.length - auswahl.length);
+    var neu = gesehen.slice();
+    auswahl.forEach(function (q) {
+      var i = neu.indexOf(q.f);
+      if (i >= 0) neu.splice(i, 1);
+      neu.push(q.f);
+    });
+    if (neu.length > maxHist) neu = neu.slice(neu.length - maxHist);
+    return { auswahl: mische(auswahl), gesehen: neu };
   }
   var PFOTE = '<span class="pfote" aria-hidden="true"><i></i><i></i><i></i><b></b></span>';
 
@@ -280,11 +303,13 @@
 
     if (tab === 'lernen') zeichneLernen(m, bereich);
     else if (tab === 'quiz') {
-      // Bei jedem Aufruf/Neuladen eine zufällige Auswahl aus allen Modulfragen
-      // ziehen – so mischt sich das Quiz und ist jedes Mal anders.
+      // Rotierende Auswahl: jede Runde bevorzugt Fragen, die zuletzt nicht
+      // dran waren – „nochmal üben" bringt so andere Fragen.
       var alleQ = QUIZ[m.id] || [];
-      var quizQ = mische(alleQ).slice(0, Math.min(MODUL_QUIZ_ANZAHL, alleQ.length));
-      zeichneQuiz(quizQ, bereich, m.id, 'modul');
+      var res = waehleRotierend(alleQ, MODUL_QUIZ_ANZAHL, stand.quizGesehen[m.id]);
+      stand.quizGesehen[m.id] = res.gesehen;
+      speichereStand(stand);
+      zeichneQuiz(res.auswahl, bereich, m.id, 'modul');
     }
     else zeichneKarten(m, bereich);
   }
